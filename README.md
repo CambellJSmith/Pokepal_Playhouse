@@ -7,7 +7,7 @@ A Godot 4.6 HD-2D / 2.5D Pokémon-style prototype: billboarded character sprites
 - `CharacterBody3D` player with camera-relative movement.
 - HGSS Ditto overworld frames temporarily used as the player visual.
 - bottom-anchored `AnimatedSprite3D` character visuals with fixed-Y billboarding.
-- collision-aware fixed perspective camera using `SpringArm3D`.
+- collision-aware free-orbit third-person camera using `SpringArm3D`.
 - a generated world measuring 168 × 136 terrain cells, approximately 252 × 204 world units.
 - seventeen contiguous type-biome regions: one for every Pokémon type available in Generation IV.
 - a redundant grid/ring route network joining all regions, plus four world-edge entrances.
@@ -72,6 +72,18 @@ Map controls:
 
 Player physics is disabled while the map is open and restored when it closes. Fast travel resets player velocity before resuming gameplay.
 
+## camera
+
+The camera is a collision-aware orbit rig centered above the player rather than a fixed-angle view.
+
+Camera controls:
+
+- hold right mouse and move the mouse: rotate and tilt;
+- right stick: rotate and tilt continuously;
+- mouse wheel: zoom between close and wide exploration distances.
+
+Horizontal rotation is unrestricted. Vertical tilt is clamped from a near-horizontal view to a near top-down view so the camera cannot flip underneath the world. The existing `SpringArm3D` still shortens the camera distance when scenery blocks the view.
+
 ## world visuals
 
 World art remains **asset-free and procedural**. There are no world tilesheets, route-map textures, imported terrain models, PDSMS assets, or external world-art setup steps.
@@ -127,6 +139,8 @@ Open `project.godot` with Godot 4.6 and press F5.
 Gameplay controls:
 
 - WASD, arrow keys, or left stick: move;
+- right mouse drag or right stick: rotate / tilt camera;
+- mouse wheel: camera zoom;
 - Start / Esc: open the world map;
 - the player starts in the central Normal Meadow;
 - follow the connected route network outward or use the map to fast travel between landmark destinations.
