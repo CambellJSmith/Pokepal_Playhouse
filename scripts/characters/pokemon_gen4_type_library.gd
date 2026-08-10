@@ -38,21 +38,39 @@ static func get_biome_kind_for_species_directory(species_directory: String) -> i
 
 static func get_biome_kind_for_type_id(type_id: int) -> int: # Maps canonical Pokémon type IDs to the world's seventeen biome enum values.
     match type_id:
-        1: return HgssWorldBuilder.BiomeKind.NORMAL
-        2: return HgssWorldBuilder.BiomeKind.FIGHTING
-        3: return HgssWorldBuilder.BiomeKind.FLYING
-        4: return HgssWorldBuilder.BiomeKind.POISON
-        5: return HgssWorldBuilder.BiomeKind.GROUND
-        6: return HgssWorldBuilder.BiomeKind.ROCK
-        7: return HgssWorldBuilder.BiomeKind.BUG
-        8: return HgssWorldBuilder.BiomeKind.GHOST
-        9: return HgssWorldBuilder.BiomeKind.STEEL
-        10: return HgssWorldBuilder.BiomeKind.FIRE
-        11: return HgssWorldBuilder.BiomeKind.WATER
-        12: return HgssWorldBuilder.BiomeKind.GRASS
-        13: return HgssWorldBuilder.BiomeKind.ELECTRIC
-        14: return HgssWorldBuilder.BiomeKind.PSYCHIC
-        15: return HgssWorldBuilder.BiomeKind.ICE
-        16: return HgssWorldBuilder.BiomeKind.DRAGON
-        17: return HgssWorldBuilder.BiomeKind.DARK
-        _: return -1
+        1:
+            return HgssWorldBuilder.BiomeKind.NORMAL
+        2:
+            return HgssWorldBuilder.BiomeKind.FIGHTING
+        3:
+            return HgssWorldBuilder.BiomeKind.FLYING
+        4:
+            return HgssWorldBuilder.BiomeKind.POISON
+        5:
+            return HgssWorldBuilder.BiomeKind.GROUND
+        6:
+            return HgssWorldBuilder.BiomeKind.ROCK
+        7:
+            return HgssWorldBuilder.BiomeKind.BUG
+        8:
+            return HgssWorldBuilder.BiomeKind.GHOST
+        9:
+            return HgssWorldBuilder.BiomeKind.STEEL
+        10:
+            return HgssWorldBuilder.BiomeKind.FIRE
+        11:
+            return HgssWorldBuilder.BiomeKind.WATER
+        12:
+            return HgssWorldBuilder.BiomeKind.GRASS
+        13:
+            return HgssWorldBuilder.BiomeKind.ELECTRIC
+        14:
+            return HgssWorldBuilder.BiomeKind.PSYCHIC
+        15:
+            return HgssWorldBuilder.BiomeKind.ICE
+        16:
+            return HgssWorldBuilder.BiomeKind.DRAGON
+        17:
+            return HgssWorldBuilder.BiomeKind.DARK
+        _:
+            return -1
