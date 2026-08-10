@@ -1,10 +1,10 @@
-[gd_scene load_steps=8 format=3 uid="uid://eav3r6quw3e4"]
+[gd_scene format=3 uid="uid://eav3r6quw3e4"]
 
 [ext_resource type="PackedScene" path="res://scenes/characters/player.tscn" id="1_player"]
-[ext_resource type="Script" path="res://scripts/world/hgss_world_builder.gd" id="2_world"]
-[ext_resource type="Script" path="res://scripts/world/wild_pokemon_spawner.gd" id="3_spawner"]
-[ext_resource type="Script" path="res://scripts/world/world_landmark_system.gd" id="4_landmarks"]
-[ext_resource type="Script" path="res://scripts/ui/world_map_overlay.gd" id="5_map"]
+[ext_resource type="Script" uid="uid://bclofssoykepy" path="res://scripts/world/hgss_world_builder.gd" id="2_world"]
+[ext_resource type="Script" uid="uid://b3mt34nce6w2t" path="res://scripts/world/wild_pokemon_spawner.gd" id="3_spawner"]
+[ext_resource type="Script" uid="uid://c1kjbkk8ju4k6" path="res://scripts/world/world_landmark_system.gd" id="4_landmarks"]
+[ext_resource type="Script" uid="uid://cmi21lpg7f50j" path="res://scripts/ui/world_map_overlay.gd" id="5_map"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -25,52 +25,53 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
-[node name="main" type="Node3D"]
+[node name="main" type="Node3D" unique_id=1177913046]
 
-[node name="world_environment" type="WorldEnvironment" parent="."]
+[node name="world_environment" type="WorldEnvironment" parent="." unique_id=244442345]
 environment = SubResource("Environment_main")
 
-[node name="sun" type="DirectionalLight3D" parent="."]
-rotation_degrees = Vector3(-48, -32, 0)
+[node name="sun" type="DirectionalLight3D" parent="." unique_id=979421091]
+transform = Transform3D(0.8480481, 0.3938068, -0.35458517, 0, 0.66913056, 0.74314487, 0.52991927, -0.63022256, 0.5674549, 0, 0, 0)
 light_color = Color(1, 0.96, 0.86, 1)
 light_energy = 1.18
 shadow_enabled = true
 
-[node name="world_builder" type="Node3D" parent="." groups=["world_builder"]]
+[node name="world_builder" type="Node3D" parent="." unique_id=248779433 groups=["world_builder"]]
 script = ExtResource("2_world")
 
-[node name="world_landmarks" type="Node3D" parent="." groups=["world_landmarks"]]
+[node name="world_landmarks" type="Node3D" parent="." unique_id=599500625 groups=["world_landmarks"]]
 script = ExtResource("4_landmarks")
 
-[node name="player" parent="." instance=ExtResource("1_player")]
-position = Vector3(0, 0.5, 30)
+[node name="player" parent="." unique_id=918382089 instance=ExtResource("1_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 30)
 
-[node name="wild_pokemon_spawner" type="Node3D" parent="."]
+[node name="wild_pokemon_spawner" type="Node3D" parent="." unique_id=2121055228]
 script = ExtResource("3_spawner")
 
-[node name="hud" type="CanvasLayer" parent="."]
+[node name="hud" type="CanvasLayer" parent="." unique_id=710913911]
 
-[node name="margin" type="MarginContainer" parent="hud"]
+[node name="margin" type="MarginContainer" parent="hud" unique_id=1013026774]
 offset_right = 760.0
 offset_bottom = 120.0
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 16
 
-[node name="panel" type="PanelContainer" parent="hud/margin"]
+[node name="panel" type="PanelContainer" parent="hud/margin" unique_id=1424220069]
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBox_hud")
 
-[node name="text" type="VBoxContainer" parent="hud/margin/panel"]
+[node name="text" type="VBoxContainer" parent="hud/margin/panel" unique_id=431517434]
 layout_mode = 2
 
-[node name="title" type="Label" parent="hud/margin/panel/text"]
+[node name="title" type="Label" parent="hud/margin/panel/text" unique_id=890190821]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
 text = "Poképal Playhouse — Generation IV type world"
 
-[node name="controls" type="Label" parent="hud/margin/panel/text"]
+[node name="controls" type="Label" parent="hud/margin/panel/text" unique_id=2499083]
 layout_mode = 2
-text = "wasd / arrows / left stick  •  move    right mouse / right stick  •  orbit    wheel  •  zoom\nEsc / Start  •  map    wild Pokémon inhabit the region matching their primary type"
+text = "wasd / arrows / left stick  •  move    right mouse / right stick  •  orbit    wheel  •  zoom
+Esc / Start  •  map    wild Pokémon inhabit the region matching their primary type"
 
-[node name="world_map" type="CanvasLayer" parent="."]
+[node name="world_map" type="CanvasLayer" parent="." unique_id=1352453810]
 script = ExtResource("5_map")
