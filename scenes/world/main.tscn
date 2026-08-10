@@ -1,8 +1,6 @@
 [gd_scene format=3 uid="uid://eav3r6quw3e4"]
 
 [ext_resource type="PackedScene" path="res://scenes/characters/player.tscn" id="1_player"]
-[ext_resource type="PackedScene" path="res://scenes/characters/follower.tscn" id="2_follower"]
-[ext_resource type="PackedScene" path="res://scenes/characters/npc.tscn" id="3_npc"]
 [ext_resource type="Script" uid="uid://b3mt34nce6w2t" path="res://scripts/world/wild_pokemon_spawner.gd" id="4_wild_spawner"]
 
 [sub_resource type="Environment" id="Environment_main"]
@@ -236,12 +234,6 @@ shape = SubResource("Shape_tree")
 [node name="player" parent="." unique_id=1986160578 instance=ExtResource("1_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 7)
 
-[node name="follower" parent="." unique_id=1815348788 instance=ExtResource("2_follower")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0.08, 8)
-
-[node name="npc" parent="." unique_id=588224693 instance=ExtResource("3_npc")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.5, 0, 2)
-
 [node name="wild_pokemon_spawner" type="Node3D" parent="." unique_id=1354553830]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 8)
 script = ExtResource("4_wild_spawner")
@@ -268,5 +260,4 @@ text = "hgss hd3d starter"
 
 [node name="controls" type="Label" parent="hud/margin/panel/text" unique_id=558998009]
 layout_mode = 2
-text = "wasd / arrows / left stick  •  move
-random pokémon wander in, hang out, then leave"
+text = "wasd / arrows / left stick  •  move\nrandom pokémon wander in, hang out, then leave"

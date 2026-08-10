@@ -7,10 +7,9 @@ A Godot 4.6 starter scene for an HD-2D / 2.5D Pokémon-style game: real 3D world
 - `CharacterBody3D` player with camera-relative movement.
 - HGSS Ditto overworld frames temporarily used as the player visual.
 - `AnimatedSprite3D` with fixed-Y billboarding, nearest filtering, alpha cut, and normal depth testing.
-- reusable `BillboardCharacterVisual` component shared by the player, follower, and roaming Pokémon.
+- reusable `BillboardCharacterVisual` component shared by the player and roaming Pokémon.
 - collision-aware fixed perspective camera using `SpringArm3D`.
 - one simple 3D route with ground, an elevated terrace, visible stairs backed by an invisible walkable ramp, and occluding tree geometry.
-- one static NPC placeholder and one following Pokémon placeholder, both currently using Ditto.
 - random overworld Pokémon that enter the lower route, pause and wander for a while, then walk back out and despawn.
 - runtime Pokémon sprite discovery that automatically sees numbered species folders and their forms.
 - project-local input bootstrap using the action names `StickLeft_North`, `StickLeft_South`, `StickLeft_West`, `StickLeft_East`, `Button_A`, and `Button_Start`.
@@ -99,8 +98,6 @@ scenes/
 ├── characters/
 │   ├── ditto_visual.tscn
 │   ├── pokemon_visual.tscn
-│   ├── follower.tscn
-│   ├── npc.tscn
 │   ├── player.tscn
 │   └── wild_pokemon.tscn
 └── world/
@@ -111,7 +108,6 @@ scripts/
 │   └── camera_rig.gd
 ├── characters/
 │   ├── billboard_character_visual.gd
-│   ├── follower_controller.gd
 │   ├── player_controller.gd
 │   ├── pokemon_sprite_library.gd
 │   └── wild_pokemon.gd
@@ -121,7 +117,7 @@ scripts/
     └── wild_pokemon_spawner.gd
 ```
 
-The movement controllers own physics. `BillboardCharacterVisual` owns only camera-relative visual facing and animation selection. `PokemonSpriteLibrary` owns sprite discovery and cached runtime `SpriteFrames` construction. The roaming spawner owns population and spawn-zone policy; each `WildPokemon` owns its own temporary behaviour state.
+The player and roaming Pokémon use `CharacterBody3D` collision. `BillboardCharacterVisual` owns only camera-relative visual facing and animation selection. `PokemonSpriteLibrary` owns sprite discovery and cached runtime `SpriteFrames` construction. The roaming spawner owns population and spawn-zone policy; each `WildPokemon` owns its own temporary behaviour state. Roaming Pokémon collide with the world, the player, and each other.
 
 ## replacing the temporary player art
 
