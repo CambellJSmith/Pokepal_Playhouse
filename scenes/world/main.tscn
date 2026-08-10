@@ -1,7 +1,7 @@
 [gd_scene load_steps=6 format=3 uid="uid://eav3r6quw3e4"]
 
 [ext_resource type="PackedScene" path="res://scenes/characters/player.tscn" id="1_player"]
-[ext_resource type="Script" path="res://scripts/world/flat_color_world_builder.gd" id="2_world"]
+[ext_resource type="Script" path="res://scripts/world/hgss_world_builder.gd" id="2_world"]
 [ext_resource type="Script" path="res://scripts/world/wild_pokemon_spawner.gd" id="3_spawner"]
 
 [sub_resource type="Environment" id="Environment_main"]
