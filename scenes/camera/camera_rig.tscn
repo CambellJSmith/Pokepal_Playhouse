@@ -4,7 +4,6 @@
 
 [node name="camera_rig" type="Node3D"]
 position = Vector3(0, 1.15, 0)
-rotation = Vector3(-0.610865, 0.785398, 0)
 script = ExtResource("1_camera")
 
 [node name="spring_arm" type="SpringArm3D" parent="."]
