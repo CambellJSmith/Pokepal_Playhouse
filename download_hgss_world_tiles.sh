@@ -2,15 +2,19 @@
 set -euo pipefail
 
 OUTPUT_DIR="assets/world/hgss/source_maps"
-USER_AGENT="Mozilla/5.0 (compatible; PokepalPlayhouseAssetSetup/1.0)"
+USER_AGENT="PokepalPlayhouseAssetSetup/1.1"
+PNG_MAGIC="89504e470d0a1a0a"
 
 mkdir -p "$OUTPUT_DIR"
 
 download_png() {
     local url="$1"
     local destination="$2"
+    local temporary_path="${destination}.part"
 
     printf 'downloading %s...\n' "$destination"
+
+    rm -f "$temporary_path"
 
     curl \
         --fail \
@@ -21,24 +25,36 @@ download_png() {
         --silent \
         --user-agent "$USER_AGENT" \
         "$url" \
-        --output "$destination"
+        --output "$temporary_path"
 
-    if [[ ! -s "$destination" ]]; then
+    if [[ ! -s "$temporary_path" ]]; then
         printf 'error: downloaded file is empty: %s\n' "$destination" >&2
+        rm -f "$temporary_path"
         exit 1
     fi
+
+    local downloaded_magic
+    downloaded_magic="$(od -An -t x1 -N 8 "$temporary_path" | tr -d ' \n')"
+
+    if [[ "$downloaded_magic" != "$PNG_MAGIC" ]]; then
+        printf 'error: downloaded file is not a PNG: %s\n' "$destination" >&2
+        rm -f "$temporary_path"
+        exit 1
+    fi
+
+    mv "$temporary_path" "$destination"
 }
 
 download_png \
-    "https://www.pokemontrash.com/images/heartgold-soulsilver/lieux/routes/route-29.png" \
+    "https://archives.bulbagarden.net/wiki/Special:Redirect/file/Johto_Route_29_HGSS.png" \
     "$OUTPUT_DIR/route_29.png"
 
 download_png \
-    "https://www.pokebip.com/pages/jeux-video/pokemon-heartgold-soulsilver/guide-complet-johto-kanto/images/map/route-6.png" \
+    "https://archives.bulbagarden.net/wiki/Special:Redirect/file/Kanto_Route_6_HGSS.png" \
     "$OUTPUT_DIR/route_6.png"
 
 download_png \
-    "https://www.pokebip.com/pages/jeux-video/pokemon-heartgold-soulsilver/guide-complet-johto-kanto/images/map/route-5.png" \
+    "https://archives.bulbagarden.net/wiki/Special:Redirect/file/Kanto_Route_5_HGSS.png" \
     "$OUTPUT_DIR/route_5.png"
 
 printf '\nHGSS source maps downloaded to %s\n' "$OUTPUT_DIR"
