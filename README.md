@@ -16,7 +16,8 @@ A Godot 4.6 HD-2D / 2.5D Pokémon-style prototype: real 3D terrain and collision
 - dense forest boundaries and internal woodland using batched `MultiMeshInstance3D` tree geometry.
 - procedural terrain surfaces built from small texture crops sampled from actual HeartGold/SoulSilver route-map images.
 - one combined static level collision mesh generated from the same height field as the visible terrain.
-- random overworld Pokémon that enter through route gates, wander on valid terrain, hang out, then leave through the nearest gate.
+- one shared `AStarGrid2D` navigation cache built from the same water/tree walkability rules.
+- random overworld Pokémon that enter through route edges, route around water/forest, hang out, then leave through the nearest reachable gate.
 - roaming Pokémon collide with the world, the player, and each other.
 - runtime Pokémon sprite discovery that automatically sees numbered species folders and their forms.
 
@@ -83,19 +84,19 @@ The world builder uses `AtlasTexture` regions from those source maps for grass, 
 
 ## roaming Pokémon
 
-`WildPokemonSpawner` discovers installed species and asks `HgssWorldBuilder` for valid entry points and walkable wandering targets.
+`WildPokemonSpawner` discovers installed species and asks `HgssWorldBuilder` for valid entry cells and walkable wandering targets. `HgssWorldNavigation` maintains one shared A* grid so all temporary Pokémon route through the same terrain rules rather than each building their own navigation data.
 
 Current behaviour:
 
 1. choose a random Pokédex species uniformly;
 2. choose one of that species' available forms;
 3. choose one of four route entrances;
-4. spawn just beyond that map entrance;
-5. walk into the generated world;
-6. idle and wander between nearby walkable cells;
+4. appear on the solid route-edge cell and walk inward;
+5. idle and wander between nearby walkable cells;
+6. follow A* paths around water and hard forest cells;
 7. remain for roughly 14–32 seconds;
-8. walk toward the nearest route exit;
-9. despawn after leaving.
+8. route toward the nearest reachable route edge;
+9. despawn on reaching that exit.
 
 The current population cap is 18 temporary Pokémon. Only the `normal` visual variant is used for random spawning; female and shiny folders remain available for later encounter rules.
 
@@ -137,10 +138,11 @@ scripts/
 │   └── input_bootstrap.gd
 └── world/
     ├── hgss_world_builder.gd
+    ├── hgss_world_navigation.gd
     └── wild_pokemon_spawner.gd
 ```
 
-`HgssWorldBuilder` owns terrain classification, procedural geometry, static world collision, forest batching, water boundaries, and walkable-position queries. `WildPokemonSpawner` owns population policy. Each `WildPokemon` owns only its temporary behaviour and movement. `BillboardCharacterVisual` owns camera-relative sprite facing and animation selection.
+`HgssWorldBuilder` owns terrain classification, procedural geometry, static world collision, forest batching, water boundaries, and walkable-position queries. `HgssWorldNavigation` owns the shared grid pathfinder. `WildPokemonSpawner` owns population policy. Each `WildPokemon` owns its temporary behaviour and path following. `BillboardCharacterVisual` owns camera-relative sprite facing and animation selection.
 
 ## replacing the temporary player art
 
