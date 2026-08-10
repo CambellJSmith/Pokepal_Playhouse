@@ -102,13 +102,12 @@ scripts/
 ├── core/
 │   └── input_bootstrap.gd
 └── world/
-    ├── flat_color_world_builder.gd
     ├── hgss_world_builder.gd
     ├── hgss_world_navigation.gd
     └── wild_pokemon_spawner.gd
 ```
 
-`FlatColorWorldBuilder` supplies the temporary flat-color presentation. It reuses the established procedural layout, height field, collision generation, forest positions, entry points, and navigation-facing queries from `HgssWorldBuilder` without loading any world textures or imported models.
+`HgssWorldBuilder` owns the procedural layout, flat-color terrain and forest markers, elevation, static collision, water boundaries, entry points, and walkable-position queries. `HgssWorldNavigation` owns the shared grid pathfinder. `WildPokemonSpawner` owns population policy.
 
 ## temporary player art
 
