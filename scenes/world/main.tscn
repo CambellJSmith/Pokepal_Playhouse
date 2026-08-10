@@ -1,9 +1,8 @@
-[gd_scene load_steps=7 format=3 uid="uid://eav3r6quw3e4"]
+[gd_scene load_steps=6 format=3 uid="uid://eav3r6quw3e4"]
 
 [ext_resource type="PackedScene" path="res://scenes/characters/player.tscn" id="1_player"]
-[ext_resource type="Script" path="res://scripts/world/hgss_world_builder.gd" id="2_world"]
+[ext_resource type="Script" path="res://scripts/world/flat_color_world_builder.gd" id="2_world"]
 [ext_resource type="Script" path="res://scripts/world/wild_pokemon_spawner.gd" id="3_spawner"]
-[ext_resource type="Script" path="res://scripts/world/hgss_world_visibility_fix.gd" id="4_visibility"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
@@ -37,9 +36,6 @@ shadow_enabled = true
 [node name="world_builder" type="Node3D" parent="." groups=["world_builder"]]
 script = ExtResource("2_world")
 
-[node name="world_visibility_fix" type="Node" parent="."]
-script = ExtResource("4_visibility")
-
 [node name="player" parent="." instance=ExtResource("1_player")]
 position = Vector3(0, 0.12, 48)
 
@@ -64,8 +60,8 @@ layout_mode = 2
 [node name="title" type="Label" parent="hud/margin/panel/text"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
-text = "Poképal Playhouse — expanded HGSS world"
+text = "Poképal Playhouse — flat-colour world prototype"
 
 [node name="controls" type="Label" parent="hud/margin/panel/text"]
 layout_mode = 2
-text = "wasd / arrows / left stick  •  move\nexplore routes, bridges, water, forests, hills and highlands"
+text = "wasd / arrows / left stick  •  move\nflat colours represent terrain and world objects while layout is developed"
