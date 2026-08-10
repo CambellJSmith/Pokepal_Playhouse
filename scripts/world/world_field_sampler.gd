@@ -81,7 +81,7 @@ func sample_biome(local: Vector2) -> int: # Resolves an irregular but contiguous
 
 func sample_height(local: Vector2) -> float: # Produces continuous terrain from layered warped noise, regional landforms, and river carving.
     var macro: float = macro_noise.get_noise_2d(local.x, local.y) * 1.35 # Establishes broad rolling elevation across the whole map.
-    var detail: float = detail_noise.get_noise_2d(local.x, local.y) * 0.34 # Adds smaller undulation without overwhelming the macro terrain.
+    var detail: float = detail_noise.get_noise_2d(local.x, local.y) * 0.34 # Adds smaller terrain undulation without overwhelming the macro terrain.
     var ridge: float = clampf((ridge_noise.get_noise_2d(local.x, local.y) + 1.0) * 0.5, 0.0, 1.0) # Converts ridged noise into a stable positive mountain mask.
     var badland: float = clampf((badland_noise.get_noise_2d(local.x, local.y) + 1.0) * 0.5, 0.0, 1.0) # Converts ping-pong noise into repeated erosion-like forms.
     var height: float = macro + detail # Starts with terrain shared continuously by every biome.
@@ -126,8 +126,8 @@ func sample_temperature(local: Vector2) -> float: # Returns a broad temperature 
     return clampf(noise_value + latitude_bias, -1.0, 1.0) # Keeps the combined field within a predictable range for scoring.
 
 func sample_river_strength(local: Vector2) -> float: # Returns a narrow continuous mask around zero-contours of the river field.
-    var signal: float = absf(river_noise.get_noise_2d(local.x, local.y)) # Measures distance in noise-value space from a meandering zero contour.
-    return clampf(1.0 - signal / 0.075, 0.0, 1.0) # Converts the signal into a soft channel mask used by terrain and water.
+    var river_signal: float = absf(river_noise.get_noise_2d(local.x, local.y)) # Measures distance in noise-value space from a meandering zero contour.
+    return clampf(1.0 - river_signal / 0.075, 0.0, 1.0) # Converts the signal into a soft channel mask used by terrain and water.
 
 func is_water(local: Vector2, biome_kind: int, terrain_height: float, water_level: float) -> bool: # Decides where carved low terrain receives visible water.
     var river_strength: float = sample_river_strength(local) # Reuses the exact channel field that already carved the terrain.
