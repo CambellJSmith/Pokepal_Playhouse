@@ -30,6 +30,7 @@ var entry_target_positions: Array[Vector3] = [] # Matching walkable positions in
 func _ready() -> void: # Builds the complete procedural world with no external world-art assets.
     add_to_group(&"world_builder") # Exposes this component without coupling systems to a scene path.
     _prepare_layout_cache() # Classifies terrain and blockers once before geometry is created.
+    _prune_isolated_walkable_regions() # Folds tiny unreachable pockets into surrounding woodland before physics/navigation are built.
     _build_terrain_geometry() # Creates terrain visuals and the combined static collision mesh.
     _build_environment_visuals() # Adds trees, bridge decks, rocks, shrubs, and water depth.
     _prepare_entry_points() # Creates route gates for temporary roaming Pokémon.
@@ -102,6 +103,30 @@ func _prepare_layout_cache() -> void: # Classifies every cell so rendering, coll
             if _calculate_tree_for_cell(cell, terrain_kind):
                 blocked_cells[cell] = true
 
+func _prune_isolated_walkable_regions() -> void: # Ensures every visible open region belongs to the main explorable landmass.
+    var start_cell: Vector2i = Vector2i(WORLD_WIDTH / 2, WORLD_DEPTH / 2)
+    if not is_cell_walkable(start_cell):
+        return
+    var reachable: Dictionary = {start_cell: true}
+    var queue: Array[Vector2i] = [start_cell]
+    var queue_index: int = 0
+    while queue_index < queue.size():
+        var cell: Vector2i = queue[queue_index]
+        queue_index += 1
+        var neighbours: Array[Vector2i] = [cell + Vector2i(1, 0), cell + Vector2i(-1, 0), cell + Vector2i(0, 1), cell + Vector2i(0, -1)]
+        for neighbour: Vector2i in neighbours:
+            if reachable.has(neighbour) or not is_cell_walkable(neighbour):
+                continue
+            reachable[neighbour] = true
+            queue.append(neighbour)
+    for cell_z: int in range(WORLD_DEPTH):
+        for cell_x: int in range(WORLD_WIDTH):
+            var cell: Vector2i = Vector2i(cell_x, cell_z)
+            if _terrain_for_cell(cell) == TerrainKind.WATER or reachable.has(cell) or blocked_cells.has(cell):
+                continue
+            terrain_cache[cell] = TerrainKind.GRASS
+            blocked_cells[cell] = true
+
 func _build_terrain_geometry() -> void: # Builds batched shaded terrain surfaces and one static collision body.
     var materials: Dictionary = _create_terrain_materials()
     var tools: Dictionary = {}
@@ -156,29 +181,46 @@ func _build_environment_visuals() -> void: # Adds lightweight generated scenery 
     _build_rock_visuals()
     _build_shrub_visuals()
 
-func _build_water_depth_visual() -> void: # Gives transparent water a darker visible bed instead of showing the sky through it.
-    var surface_tool: SurfaceTool = SurfaceTool.new()
-    surface_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
-    surface_tool.set_material(_create_ground_material(WATER_DEPTH_COLOR, 1.0))
-    var vertex_count: int = 0
+func _build_water_depth_visual() -> void: # Gives water visible depth and keeps the river visually continuous beneath bridges.
+    var depth_tool: SurfaceTool = SurfaceTool.new()
+    depth_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+    depth_tool.set_material(_create_ground_material(WATER_DEPTH_COLOR, 1.0))
+    var bridge_water_tool: SurfaceTool = SurfaceTool.new()
+    bridge_water_tool.begin(Mesh.PRIMITIVE_TRIANGLES)
+    bridge_water_tool.set_material(_create_water_material())
+    var depth_vertex_count: int = 0
+    var bridge_water_vertex_count: int = 0
     for cell_z: int in range(WORLD_DEPTH):
         for cell_x: int in range(WORLD_WIDTH):
             var cell: Vector2i = Vector2i(cell_x, cell_z)
-            if _terrain_for_cell(cell) != TerrainKind.WATER:
+            var local: Vector2 = _cell_to_local_2d(cell)
+            var water_cell: bool = _terrain_for_cell(cell) == TerrainKind.WATER
+            var bridge_cell: bool = _is_bridge(local)
+            if not water_cell and not bridge_cell:
                 continue
-            var corners: Array[Vector3] = _get_cell_corners(cell, TerrainKind.WATER)
-            for corner_index: int in range(corners.size()):
-                corners[corner_index].y = WATER_LEVEL - 0.55
-            _append_quad_to_surface(surface_tool, corners)
-            vertex_count += 6
-    if vertex_count <= 0:
-        return
-    surface_tool.generate_normals()
-    var mesh_instance: MeshInstance3D = MeshInstance3D.new()
-    mesh_instance.name = "water_depth"
-    mesh_instance.mesh = surface_tool.commit()
-    mesh_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-    add_child(mesh_instance)
+            var surface_corners: Array[Vector3] = _get_cell_corners(cell, TerrainKind.WATER)
+            var depth_corners: Array[Vector3] = surface_corners.duplicate()
+            for corner_index: int in range(depth_corners.size()):
+                depth_corners[corner_index].y = WATER_LEVEL - 0.55
+            _append_quad_to_surface(depth_tool, depth_corners)
+            depth_vertex_count += 6
+            if bridge_cell:
+                _append_quad_to_surface(bridge_water_tool, surface_corners)
+                bridge_water_vertex_count += 6
+    if depth_vertex_count > 0:
+        depth_tool.generate_normals()
+        var depth_instance: MeshInstance3D = MeshInstance3D.new()
+        depth_instance.name = "water_depth"
+        depth_instance.mesh = depth_tool.commit()
+        depth_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+        add_child(depth_instance)
+    if bridge_water_vertex_count > 0:
+        bridge_water_tool.generate_normals()
+        var bridge_water_instance: MeshInstance3D = MeshInstance3D.new()
+        bridge_water_instance.name = "water_under_bridges"
+        bridge_water_instance.mesh = bridge_water_tool.commit()
+        bridge_water_instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+        add_child(bridge_water_instance)
 
 func _build_tree_visuals() -> void: # Replaces blocker boxes with low-poly trunk and canopy tree models.
     var tree_cells: Array[Vector2i] = []
@@ -232,6 +274,8 @@ func _build_rock_visuals() -> void: # Adds sparse low-poly rocks along shores an
             if blocked_cells.has(cell):
                 continue
             var terrain_kind: TerrainKind = _terrain_for_cell(cell)
+            if terrain_kind == TerrainKind.PATH or terrain_kind == TerrainKind.WATER:
+                continue
             var shore_rock: bool = _is_shore_cell(cell) and _hash01(cell, 23) > 0.82
             var highland_rock: bool = terrain_kind == TerrainKind.STONE and _hash01(cell, 29) > 0.91
             if shore_rock or highland_rock:
