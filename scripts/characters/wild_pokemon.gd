@@ -47,8 +47,8 @@ func _physics_process(delta: float) -> void: # Advances behaviour, movement, gra
     move_and_slide() # Moves the CharacterBody3D while resolving generated terrain, player, and Pokémon collision.
     visual.update_motion(get_real_velocity(), camera) # Selects idle or walk animation and camera-relative facing from actual resulting motion.
     _update_stall_detection(delta) # Replans local wandering when collision or terrain geometry prevents useful progress.
-    if behaviour_state == BehaviourState.LEAVING and _has_reached_target(): # Detects a departing Pokémon reaching its off-map destination.
-        queue_free() # Removes the temporary character cleanly after it has walked out.
+    if behaviour_state == BehaviourState.LEAVING and _has_reached_target(): # Detects a departing Pokémon reaching its visible route-edge destination.
+        queue_free() # Removes the temporary character after it has walked back to a map exit.
 
 func _update_behaviour(delta: float) -> void: # Advances the finite-state behaviour without coupling it to rendering.
     if behaviour_state == BehaviourState.ENTERING: # Handles the initial walk from a route gate toward the interior.
@@ -84,10 +84,11 @@ func _begin_idle_pause() -> void: # Starts a natural stationary period between l
     movement_target = global_position # Keeps the current position as the active target during the deliberate pause.
     stalled_time = 0.0 # Clears stale progress state while the Pokémon is intentionally stationary.
 
-func _begin_leaving() -> void: # Chooses a generated-world route gate and permanently switches into departure behaviour.
+func _begin_leaving() -> void: # Chooses a generated-world route edge and permanently switches into departure behaviour.
     behaviour_state = BehaviourState.LEAVING # Prevents any further idle or wandering decisions after departure begins.
     idle_time_remaining = 0.0 # Cancels an active pause so departure starts immediately.
-    movement_target = world_builder.get_exit_target_from(global_position) # Sends the Pokémon toward whichever off-map route gate is nearest.
+    var off_map_exit: Vector3 = world_builder.get_exit_target_from(global_position) # Uses the off-map helper point only to determine which gateway is nearest.
+    movement_target = world_builder.get_nearest_walkable_world_position(off_map_exit) # Converts that gateway to its nearest solid route-edge cell so boundary collision cannot trap the Pokémon.
     stalled_time = 0.0 # Gives the departure route a fresh progress timer.
 
 func _choose_wander_target() -> Vector3: # Chooses a nearby walkable destination that respects water, forest blockers, and generated elevation.
