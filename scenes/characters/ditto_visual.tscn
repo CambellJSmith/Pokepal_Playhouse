@@ -1,0 +1,38 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/characters/billboard_character_visual.gd" id="1_visual"]
+[ext_resource type="SpriteFrames" path="res://resources/sprite_frames/ditto_overworld.tres" id="2_frames"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_shadow"]
+transparency = 1
+shading_mode = 0
+albedo_color = Color(0.05, 0.04, 0.08, 0.24)
+metallic_specular = 0.0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_shadow"]
+material = SubResource("StandardMaterial3D_shadow")
+top_radius = 0.38
+bottom_radius = 0.38
+height = 0.018
+radial_segments = 24
+rings = 1
+
+[node name="ditto_visual" type="Node3D"]
+script = ExtResource("1_visual")
+
+[node name="shadow" type="MeshInstance3D" parent="."]
+position = Vector3(0, 0.012, 0)
+cast_shadow = 0
+mesh = SubResource("CylinderMesh_shadow")
+
+[node name="sprite" type="AnimatedSprite3D" parent="."]
+unique_name_in_owner = true
+position = Vector3(0, 0.64, 0)
+cast_shadow = 0
+sprite_frames = ExtResource("2_frames")
+animation = &"idle_down"
+autoplay = "idle_down"
+billboard = 2
+alpha_cut = 1
+texture_filter = 0
+pixel_size = 0.04
