@@ -58,8 +58,8 @@ func _unhandled_input(event: InputEvent) -> void: # Handles mouse orbit and zoom
         return
     if event is InputEventMouseMotion and mouse_orbit_active and _camera_controls_enabled():
         var mouse_motion: InputEventMouseMotion = event as InputEventMouseMotion
-        yaw = wrapf(yaw - mouse_motion.relative.x * MOUSE_ORBIT_SENSITIVITY, -PI, PI)
-        pitch -= mouse_motion.relative.y * MOUSE_ORBIT_SENSITIVITY
+        yaw = wrapf(yaw - mouse_motion.screen_relative.x * MOUSE_ORBIT_SENSITIVITY, -PI, PI)
+        pitch -= mouse_motion.screen_relative.y * MOUSE_ORBIT_SENSITIVITY
         pitch = clampf(pitch, deg_to_rad(MIN_PITCH_DEGREES), deg_to_rad(MAX_PITCH_DEGREES))
         _apply_rotation()
         get_viewport().set_input_as_handled()
