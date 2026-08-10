@@ -38,13 +38,15 @@ func _spawn_random_pokemon() -> void: # Instantiates and configures one random t
     var sprite_directory: String = PokemonSpriteLibrary.choose_random_sprite_directory(species_directories, random) # Selects a species uniformly and then one available form for that species.
     if sprite_directory.is_empty(): # Guards assets removed after the initial discovery scan.
         return # Skips this attempt rather than creating an incomplete character.
-    var entry_pair: Array[Vector3] = world_builder.get_random_entry_pair(random) # Requests one safe off-map route gate and matching interior target.
+    var entry_pair: Array[Vector3] = world_builder.get_random_entry_pair(random) # Requests one route-gate pair from the generated world.
     if entry_pair.size() < 2: # Guards an unexpectedly incomplete generated-world response.
         return # Skips this spawn because it cannot enter safely.
+    var edge_position: Vector3 = entry_pair[1] # Uses the solid route-edge cell rather than the off-map helper point so gravity never starts over void.
+    var initial_target: Vector3 = world_builder.get_random_walkable_world_position_near(edge_position, 8.0, random) # Chooses a nearby interior cell so the visitor visibly walks into the map.
     var pokemon: WildPokemon = WILD_POKEMON_SCENE.instantiate() as WildPokemon # Creates the reusable CharacterBody3D roaming Pokémon scene.
     add_child(pokemon) # Parents the visitor to the spawner so active population tracking stays allocation-free.
-    pokemon.global_position = entry_pair[0] # Places the visitor just outside the selected generated-world route gate.
-    pokemon.setup(sprite_directory, world_builder, entry_pair[1], random.randi()) # Supplies assets, terrain policy, arrival target, and an independent behaviour seed.
+    pokemon.global_position = edge_position # Places the visitor on a valid route cell at the visible world boundary.
+    pokemon.setup(sprite_directory, world_builder, initial_target, random.randi()) # Supplies assets, terrain policy, arrival target, and an independent behaviour seed.
 
 func _reset_spawn_countdown() -> void: # Schedules another spawn attempt within the configured interval range.
     spawn_countdown = random.randf_range(min_spawn_delay, max_spawn_delay) # Chooses the next delay independently so arrivals do not become mechanical.
