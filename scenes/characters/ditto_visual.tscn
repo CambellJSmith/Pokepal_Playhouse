@@ -1,7 +1,8 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scripts/characters/billboard_character_visual.gd" id="1_visual"]
 [ext_resource type="SpriteFrames" path="res://resources/sprite_frames/ditto_overworld.tres" id="2_frames"]
+[ext_resource type="Script" path="res://scripts/characters/bottom_anchored_animated_sprite_3d.gd" id="3_anchor"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_shadow"]
 transparency = 1
@@ -27,7 +28,6 @@ mesh = SubResource("CylinderMesh_shadow")
 
 [node name="sprite" type="AnimatedSprite3D" parent="."]
 unique_name_in_owner = true
-position = Vector3(0, 0.64, 0)
 cast_shadow = 0
 sprite_frames = ExtResource("2_frames")
 animation = &"idle_down"
@@ -36,3 +36,4 @@ billboard = 2
 alpha_cut = 1
 texture_filter = 0
 pixel_size = 0.04
+script = ExtResource("3_anchor")
