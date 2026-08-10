@@ -30,11 +30,11 @@ download_png() {
 }
 
 download_png \
-    "https://www.pokemontrash.com/images/heartgold-soulsilver/cartes/route-29-partie-1.png" \
+    "https://www.pokemontrash.com/images/heartgold-soulsilver/lieux/routes/route-29.png" \
     "$OUTPUT_DIR/route_29.png"
 
 download_png \
-    "https://www.pokebip.com/pages/jeuxvideo/pokemon_coeur_or_heartgold_ame_argent_soulsilver/guide_complet_johto_kanto/images/map/route_6.png" \
+    "https://www.pokebip.com/pages/jeux-video/pokemon-heartgold-soulsilver/guide-complet-johto-kanto/images/map/route-6.png" \
     "$OUTPUT_DIR/route_6.png"
 
 download_png \
