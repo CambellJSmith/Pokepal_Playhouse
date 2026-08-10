@@ -1,29 +1,34 @@
-# hgss_hd3d_starter
+# Poképal Playhouse
 
-A Godot 4.6 starter scene for an HD-2D / 2.5D Pokémon-style game: real 3D world geometry with camera-facing pixel sprites.
+A Godot 4.6 HD-2D / 2.5D Pokémon-style prototype: real 3D terrain and collision with camera-facing HGSS Pokémon sprites.
 
-## included
+## current prototype
 
 - `CharacterBody3D` player with camera-relative movement.
 - HGSS Ditto overworld frames temporarily used as the player visual.
 - `AnimatedSprite3D` with fixed-Y billboarding, nearest filtering, alpha cut, and normal depth testing.
 - reusable `BillboardCharacterVisual` component shared by the player and roaming Pokémon.
 - collision-aware fixed perspective camera using `SpringArm3D`.
-- one simple 3D route with ground, an elevated terrace, visible stairs backed by an invisible walkable ramp, and occluding tree geometry.
-- random overworld Pokémon that enter the lower route, pause and wander for a while, then walk back out and despawn.
+- a generated world approximately 144 × 120 world units rather than the original tiny test route.
+- connected north/south, east/west, curved southern, and highland route branches.
+- a winding river, two bridge crossings, a southeast lake, and a southwest pond.
+- continuous 3D elevation with northern highlands, an eastern raised plaza, and a western hill.
+- dense forest boundaries and internal woodland using batched `MultiMeshInstance3D` tree geometry.
+- procedural terrain surfaces built from small texture crops sampled from actual HeartGold/SoulSilver route-map images.
+- one combined static level collision mesh generated from the same height field as the visible terrain.
+- random overworld Pokémon that enter through route gates, wander on valid terrain, hang out, then leave through the nearest gate.
+- roaming Pokémon collide with the world, the player, and each other.
 - runtime Pokémon sprite discovery that automatically sees numbered species folders and their forms.
-- project-local input bootstrap using the action names `StickLeft_North`, `StickLeft_South`, `StickLeft_West`, `StickLeft_East`, `Button_A`, and `Button_Start`.
-- optional `tools/download_hgss_overworld.sh` for filling `assets/pokemon/hgss_overworld/` with the complete HGSS overworld set.
 
-## installing the complete pokemon sprite folder
+## installing the complete Pokémon sprite folder
 
-The project expects the numbered folders to be directly inside:
+The project expects numbered folders directly inside:
 
 ```text
 res://assets/pokemon/hgss_overworld/
 ```
 
-The important part is that the resulting structure looks like this:
+For example:
 
 ```text
 assets/pokemon/hgss_overworld/
@@ -45,49 +50,66 @@ assets/pokemon/hgss_overworld/
 └── 493/
 ```
 
-Do not accidentally create an extra nested folder such as:
-
-```text
-assets/pokemon/hgss_overworld/hgss_overworld/001/
-```
-
-If you use the included downloader from the project root, run:
+To populate the folder from the Veekun archive:
 
 ```bash
 ./tools/download_hgss_overworld.sh ./assets/pokemon/hgss_overworld
 ```
 
-Godot must import the PNG files before the runtime loader can use them. If the editor is already open when you copy the full set in, allow the FileSystem dock to finish importing before running the scene.
+Godot must finish importing the PNG files before the runtime loader can see them.
 
-## roaming pokemon
+## installing the HGSS world tiles
 
-`wild_pokemon_spawner` in `scenes/world/main.tscn` scans the sprite directory when the scene starts.
+The 3D world can run with fallback colors, but the intended look samples its terrain pixels from clean HeartGold/SoulSilver route maps.
 
-The current prototype behaviour is deliberately simple:
+From the repository root run:
+
+```bash
+bash download_hgss_world_tiles.sh
+```
+
+That creates:
+
+```text
+assets/world/hgss/source_maps/
+├── route_29.png
+├── route_6.png
+└── route_5.png
+```
+
+These downloaded PNG files are ignored by Git and therefore survive `sync_from_github.sh`, which uses `git clean -fd` rather than deleting ignored files.
+
+The world builder uses `AtlasTexture` regions from those source maps for grass, dirt path, tall grass, water, and stone terrain. If the files are absent, the same terrain layout is generated with fallback colors so development can continue.
+
+## roaming Pokémon
+
+`WildPokemonSpawner` discovers installed species and asks `HgssWorldBuilder` for valid entry points and walkable wandering targets.
+
+Current behaviour:
 
 1. choose a random Pokédex species uniformly;
 2. choose one of that species' available forms;
-3. spawn just outside one edge of the lower-route roaming rectangle;
-4. walk into the area;
-5. idle and wander between nearby points;
-6. remain for roughly 10-22 seconds;
-7. walk out through the nearest edge;
-8. free the temporary character.
+3. choose one of four route entrances;
+4. spawn just beyond that map entrance;
+5. walk into the generated world;
+6. idle and wander between nearby walkable cells;
+7. remain for roughly 14–32 seconds;
+8. walk toward the nearest route exit;
+9. despawn after leaving.
 
-Only the `normal` visual variant is used for random wild spawning right now. Female and shiny folders remain available for later encounter rules without changing the asset layout.
-
-The test scene caps the temporary population at seven Pokémon. The roaming rectangle and timing values are ordinary private variables in `scripts/world/wild_pokemon_spawner.gd`, not editor exports.
+The current population cap is 18 temporary Pokémon. Only the `normal` visual variant is used for random spawning; female and shiny folders remain available for later encounter rules.
 
 ## run
 
-Open `project.godot` with Godot 4.6 and press F6/F5.
+Open `project.godot` with Godot 4.6 and press F5.
 
 Controls:
 
 - WASD, arrow keys, or left stick: move.
-- Walk north through the stone stairs to test elevation and slope handling.
-- Walk behind the tree proxies to test normal 3D depth/occlusion against billboard sprites.
-- Stay around the lower route to watch temporary wild Pokémon enter and leave.
+- Explore north for the highlands.
+- Follow the east route to the raised plaza.
+- Cross the river at the bridge routes.
+- Explore the western woodland and southern encounter fields.
 
 ## architecture
 
@@ -114,14 +136,15 @@ scripts/
 ├── core/
 │   └── input_bootstrap.gd
 └── world/
+    ├── hgss_world_builder.gd
     └── wild_pokemon_spawner.gd
 ```
 
-The player and roaming Pokémon use `CharacterBody3D` collision. `BillboardCharacterVisual` owns only camera-relative visual facing and animation selection. `PokemonSpriteLibrary` owns sprite discovery and cached runtime `SpriteFrames` construction. The roaming spawner owns population and spawn-zone policy; each `WildPokemon` owns its own temporary behaviour state. Roaming Pokémon collide with the world, the player, and each other.
+`HgssWorldBuilder` owns terrain classification, procedural geometry, static world collision, forest batching, water boundaries, and walkable-position queries. `WildPokemonSpawner` owns population policy. Each `WildPokemon` owns only its temporary behaviour and movement. `BillboardCharacterVisual` owns camera-relative sprite facing and animation selection.
 
 ## replacing the temporary player art
 
-The current player visual scene points at `resources/sprite_frames/ditto_overworld.tres`. Later, replace that `SpriteFrames` resource with a player-specific resource containing the same animation names:
+The current player visual points at `resources/sprite_frames/ditto_overworld.tres`. Later, replace it with a player-specific `SpriteFrames` resource containing the same animation names:
 
 ```text
 idle_down
@@ -134,10 +157,10 @@ walk_left
 walk_right
 ```
 
-Nothing in `player_controller.gd` needs to change.
+The player movement controller does not need to change.
 
-## sprite source
+## asset sources
 
-The included Ditto frames are HGSS overworld sprites obtained from Veekun's sprite archive. The helper downloader uses the same archive and preserves its form/gender/shiny structure in predictable Godot-friendly directories.
+The included Ditto frames and downloaded Pokémon overworld sprites come from Veekun's collected HGSS game sprites.
 
-Pokémon and related characters/assets are property of their respective rights holders. The source code in this starter is independent project code; the included game sprites are provided only as temporary development assets for this prototype.
+The optional world source-map downloader currently retrieves clean HGSS route-map images used only as texture sources for the procedural 3D prototype. Pokémon and related game artwork remain property of their respective rights holders; replace or license assets appropriately for distributed work.
