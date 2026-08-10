@@ -22,7 +22,10 @@ func _update_bottom_anchor() -> void: # Moves the centered image upward by half 
     if frames_id == anchored_frames_id and animation == anchored_animation and frame == anchored_frame:
         return
     var frame_texture: Texture2D = sprite_frames.get_frame_texture(animation, frame)
-    offset = Vector2.ZERO if frame_texture == null else Vector2(0.0, float(frame_texture.get_height()) * 0.5)
+    if frame_texture == null:
+        offset = Vector2.ZERO
+    else:
+        offset = Vector2(0.0, float(frame_texture.get_height()) * 0.5) # Positive Sprite3D Y offset lifts the centered image so its bottom edge lands on local Y zero.
     anchored_frames_id = frames_id
     anchored_animation = animation
     anchored_frame = frame
