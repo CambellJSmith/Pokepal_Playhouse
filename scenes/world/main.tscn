@@ -1,101 +1,16 @@
-[gd_scene format=3 uid="uid://eav3r6quw3e4"]
+[gd_scene load_steps=6 format=3 uid="uid://eav3r6quw3e4"]
 
 [ext_resource type="PackedScene" path="res://scenes/characters/player.tscn" id="1_player"]
-[ext_resource type="Script" uid="uid://b3mt34nce6w2t" path="res://scripts/world/wild_pokemon_spawner.gd" id="4_wild_spawner"]
+[ext_resource type="Script" path="res://scripts/world/hgss_world_builder.gd" id="2_world"]
+[ext_resource type="Script" path="res://scripts/world/wild_pokemon_spawner.gd" id="3_spawner"]
 
 [sub_resource type="Environment" id="Environment_main"]
 background_mode = 1
-background_color = Color(0.72, 0.84, 0.9, 1)
+background_color = Color(0.66, 0.79, 0.88, 1)
 ambient_light_source = 2
-ambient_light_color = Color(0.72, 0.78, 0.86, 1)
-ambient_light_energy = 0.72
+ambient_light_color = Color(0.73, 0.78, 0.84, 1)
+ambient_light_energy = 0.78
 reflected_light_source = 1
-
-[sub_resource type="StandardMaterial3D" id="Material_ground"]
-albedo_color = Color(0.31, 0.52, 0.32, 1)
-roughness = 0.92
-
-[sub_resource type="BoxMesh" id="Mesh_ground"]
-material = SubResource("Material_ground")
-size = Vector3(22, 0.5, 22)
-
-[sub_resource type="BoxShape3D" id="Shape_ground"]
-size = Vector3(22, 0.5, 22)
-
-[sub_resource type="StandardMaterial3D" id="Material_path"]
-albedo_color = Color(0.69, 0.61, 0.45, 1)
-roughness = 0.95
-
-[sub_resource type="BoxMesh" id="Mesh_path_ground"]
-material = SubResource("Material_path")
-size = Vector3(4, 0.035, 10)
-
-[sub_resource type="BoxMesh" id="Mesh_platform"]
-material = SubResource("Material_ground")
-size = Vector3(12, 0.5, 8)
-
-[sub_resource type="BoxShape3D" id="Shape_platform"]
-size = Vector3(12, 0.5, 8)
-
-[sub_resource type="BoxMesh" id="Mesh_path_platform"]
-material = SubResource("Material_path")
-size = Vector3(4, 0.035, 7)
-
-[sub_resource type="StandardMaterial3D" id="Material_stone"]
-albedo_color = Color(0.5, 0.53, 0.55, 1)
-roughness = 0.9
-
-[sub_resource type="BoxMesh" id="Mesh_step1"]
-material = SubResource("Material_stone")
-size = Vector3(4, 0.25, 1)
-
-[sub_resource type="BoxMesh" id="Mesh_step2"]
-material = SubResource("Material_stone")
-size = Vector3(4, 0.5, 1)
-
-[sub_resource type="BoxMesh" id="Mesh_step3"]
-material = SubResource("Material_stone")
-size = Vector3(4, 0.75, 1)
-
-[sub_resource type="BoxMesh" id="Mesh_step4"]
-material = SubResource("Material_stone")
-size = Vector3(4, 1, 1)
-
-[sub_resource type="BoxMesh" id="Mesh_step5"]
-material = SubResource("Material_stone")
-size = Vector3(4, 1.25, 1)
-
-[sub_resource type="BoxMesh" id="Mesh_step6"]
-material = SubResource("Material_stone")
-size = Vector3(4, 1.5, 1)
-
-[sub_resource type="BoxShape3D" id="Shape_ramp"]
-size = Vector3(4, 0.18, 6)
-
-[sub_resource type="StandardMaterial3D" id="Material_trunk"]
-albedo_color = Color(0.31, 0.19, 0.11, 1)
-
-[sub_resource type="CylinderMesh" id="Mesh_trunk"]
-material = SubResource("Material_trunk")
-top_radius = 0.33
-bottom_radius = 0.42
-height = 2.2
-radial_segments = 10
-
-[sub_resource type="StandardMaterial3D" id="Material_leaves"]
-albedo_color = Color(0.18, 0.39, 0.2, 1)
-roughness = 0.95
-
-[sub_resource type="SphereMesh" id="Mesh_leaves"]
-material = SubResource("Material_leaves")
-radius = 1.45
-height = 2.5
-radial_segments = 12
-rings = 6
-
-[sub_resource type="CylinderShape3D" id="Shape_tree"]
-height = 3.2
-radius = 0.6
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_hud"]
 content_margin_left = 12.0
@@ -108,156 +23,45 @@ corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
-[node name="main" type="Node3D" unique_id=1676120347]
+[node name="main" type="Node3D"]
 
-[node name="world_environment" type="WorldEnvironment" parent="." unique_id=252776396]
+[node name="world_environment" type="WorldEnvironment" parent="."]
 environment = SubResource("Environment_main")
 
-[node name="sun" type="DirectionalLight3D" parent="." unique_id=308695217]
-transform = Transform3D(0.86602527, 0.4095762, -0.2867884, 0, 0.5735765, 0.819152, 0.50000024, -0.7094063, 0.49673176, 0, 0, 0)
-light_energy = 1.15
+[node name="sun" type="DirectionalLight3D" parent="."]
+rotation_degrees = Vector3(-52, -35, 0)
+light_energy = 1.05
 shadow_enabled = true
 
-[node name="ground" type="StaticBody3D" parent="." unique_id=285283499]
-collision_mask = 0
+[node name="world_builder" type="Node3D" parent="." groups=["world_builder"]]
+script = ExtResource("2_world")
 
-[node name="mesh" type="MeshInstance3D" parent="ground" unique_id=1584832145]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.25, 3)
-mesh = SubResource("Mesh_ground")
+[node name="player" parent="." instance=ExtResource("1_player")]
+position = Vector3(0, 0.12, 48)
 
-[node name="collision" type="CollisionShape3D" parent="ground" unique_id=1543381903]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.25, 3)
-shape = SubResource("Shape_ground")
+[node name="wild_pokemon_spawner" type="Node3D" parent="."]
+script = ExtResource("3_spawner")
 
-[node name="ground_path" type="MeshInstance3D" parent="." unique_id=1423176295]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.018, 5)
-cast_shadow = 0
-mesh = SubResource("Mesh_path_ground")
+[node name="hud" type="CanvasLayer" parent="."]
 
-[node name="raised_platform" type="StaticBody3D" parent="." unique_id=214019838]
-collision_mask = 0
-
-[node name="mesh" type="MeshInstance3D" parent="raised_platform" unique_id=48533131]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, -10)
-mesh = SubResource("Mesh_platform")
-
-[node name="collision" type="CollisionShape3D" parent="raised_platform" unique_id=1625269311]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, -10)
-shape = SubResource("Shape_platform")
-
-[node name="raised_path" type="MeshInstance3D" parent="." unique_id=1033027358]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.518, -10)
-cast_shadow = 0
-mesh = SubResource("Mesh_path_platform")
-
-[node name="stairs_visual" type="Node3D" parent="." unique_id=1943651815]
-
-[node name="step_1" type="MeshInstance3D" parent="stairs_visual" unique_id=2025451758]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.125, -0.5)
-mesh = SubResource("Mesh_step1")
-
-[node name="step_2" type="MeshInstance3D" parent="stairs_visual" unique_id=1596155629]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, -1.5)
-mesh = SubResource("Mesh_step2")
-
-[node name="step_3" type="MeshInstance3D" parent="stairs_visual" unique_id=215517313]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.375, -2.5)
-mesh = SubResource("Mesh_step3")
-
-[node name="step_4" type="MeshInstance3D" parent="stairs_visual" unique_id=245195570]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, -3.5)
-mesh = SubResource("Mesh_step4")
-
-[node name="step_5" type="MeshInstance3D" parent="stairs_visual" unique_id=153561595]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.625, -4.5)
-mesh = SubResource("Mesh_step5")
-
-[node name="step_6" type="MeshInstance3D" parent="stairs_visual" unique_id=267582699]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, -5.5)
-mesh = SubResource("Mesh_step6")
-
-[node name="stairs_collision" type="StaticBody3D" parent="." unique_id=1381137635]
-transform = Transform3D(1, 0, 0, 0, 0.9682459, -0.24999976, 0, 0.24999976, 0.9682459, 0, 0.663, -3)
-collision_mask = 0
-
-[node name="ramp" type="CollisionShape3D" parent="stairs_collision" unique_id=8775073]
-shape = SubResource("Shape_ramp")
-
-[node name="tree_left" type="StaticBody3D" parent="." unique_id=501846309]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.8, 0, 1.5)
-collision_mask = 0
-
-[node name="trunk" type="MeshInstance3D" parent="tree_left" unique_id=1887379486]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
-mesh = SubResource("Mesh_trunk")
-
-[node name="leaves" type="MeshInstance3D" parent="tree_left" unique_id=1636723439]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.6, 0)
-mesh = SubResource("Mesh_leaves")
-
-[node name="collision" type="CollisionShape3D" parent="tree_left" unique_id=935324463]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
-shape = SubResource("Shape_tree")
-
-[node name="tree_right" type="StaticBody3D" parent="." unique_id=362202656]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, -2)
-collision_mask = 0
-
-[node name="trunk" type="MeshInstance3D" parent="tree_right" unique_id=601158970]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
-mesh = SubResource("Mesh_trunk")
-
-[node name="leaves" type="MeshInstance3D" parent="tree_right" unique_id=2061297355]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.6, 0)
-mesh = SubResource("Mesh_leaves")
-
-[node name="collision" type="CollisionShape3D" parent="tree_right" unique_id=326083248]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
-shape = SubResource("Shape_tree")
-
-[node name="tree_raised" type="StaticBody3D" parent="." unique_id=1327115826]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.5, 1.5, -10.5)
-collision_mask = 0
-
-[node name="trunk" type="MeshInstance3D" parent="tree_raised" unique_id=1998663402]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
-mesh = SubResource("Mesh_trunk")
-
-[node name="leaves" type="MeshInstance3D" parent="tree_raised" unique_id=1313572836]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.6, 0)
-mesh = SubResource("Mesh_leaves")
-
-[node name="collision" type="CollisionShape3D" parent="tree_raised" unique_id=1567167858]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 0)
-shape = SubResource("Shape_tree")
-
-[node name="player" parent="." unique_id=1986160578 instance=ExtResource("1_player")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 7)
-
-[node name="wild_pokemon_spawner" type="Node3D" parent="." unique_id=1354553830]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.08, 8)
-script = ExtResource("4_wild_spawner")
-
-[node name="hud" type="CanvasLayer" parent="." unique_id=1368948606]
-
-[node name="margin" type="MarginContainer" parent="hud" unique_id=1609836167]
-offset_right = 460.0
-offset_bottom = 110.0
+[node name="margin" type="MarginContainer" parent="hud"]
+offset_right = 520.0
+offset_bottom = 120.0
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 16
 
-[node name="panel" type="PanelContainer" parent="hud/margin" unique_id=141671426]
+[node name="panel" type="PanelContainer" parent="hud/margin"]
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBox_hud")
 
-[node name="text" type="VBoxContainer" parent="hud/margin/panel" unique_id=32598440]
+[node name="text" type="VBoxContainer" parent="hud/margin/panel"]
 layout_mode = 2
 
-[node name="title" type="Label" parent="hud/margin/panel/text" unique_id=193864297]
+[node name="title" type="Label" parent="hud/margin/panel/text"]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
-text = "hgss hd3d starter"
+text = "Poképal Playhouse — expanded HGSS world"
 
-[node name="controls" type="Label" parent="hud/margin/panel/text" unique_id=558998009]
+[node name="controls" type="Label" parent="hud/margin/panel/text"]
 layout_mode = 2
-text = "wasd / arrows / left stick  •  move\nrandom pokémon wander in, hang out, then leave"
+text = "wasd / arrows / left stick  •  move\nexplore routes, bridges, water, forests, hills and highlands"
