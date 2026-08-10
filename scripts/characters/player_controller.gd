@@ -1,6 +1,6 @@
 extends CharacterBody3D # Controls the player as a real 3D physics character.
 
-@onready var visual: BillboardCharacterVisual = $ditto_visual as BillboardCharacterVisual # References the composed billboard renderer.
+@onready var visual: BillboardCharacterVisual = $player_visual as BillboardCharacterVisual # References the composed billboard renderer.
 
 var move_speed: float = 4.0 # Controls the player's horizontal travel speed.
 var ground_acceleration: float = 24.0 # Controls how quickly horizontal movement reaches its target speed.
