@@ -9,32 +9,39 @@ A Godot 4.6 HD-2D / 2.5D Pokémon-style prototype: billboarded character sprites
 - `AnimatedSprite3D` character visuals with fixed-Y billboarding.
 - collision-aware fixed perspective camera using `SpringArm3D`.
 - a generated world approximately 144 × 120 world units.
-- connected north/south, east/west, curved southern, and highland route branches.
-- a winding river, two bridge crossings, a southeast lake, and a southwest pond.
-- continuous 3D elevation with northern highlands, an eastern raised plaza, and a western hill.
-- dense forest boundaries and internal woodland.
+- a connected route network with north/south, east/west, southern-loop, highland, and linking branches.
+- a winding river with three bridge crossings, a southeast lake, and a southwest pond.
+- continuous gentle 3D elevation with northern highlands, an eastern plaza, and a western hill.
+- clustered woodland with broad clearings and generous path shoulders rather than noisy isolated pockets.
+- procedural low-poly trees made from trunks and layered canopies.
+- translucent water with a darker depth layer that continues visually beneath bridge decks.
+- generated wooden bridge decks plus sparse shoreline/highland rocks and meadow shrubs.
 - one combined static level collision mesh generated from the same world layout.
 - one shared `AStarGrid2D` navigation cache built from the same water/tree walkability rules.
 - random overworld Pokémon that enter through route edges, wander, and leave again.
 
 ## world visuals
 
-The world intentionally uses **flat colors only** while the layout and gameplay are being developed.
+The world remains **asset-free and procedural**, but it is no longer represented by flat debug blocks alone.
 
 Current representation:
 
-- ordinary grass: green;
-- paths and bridges: tan;
-- tall grass: dark green;
-- water: blue;
-- stone / raised terrain: gray;
-- forest blockers / tree objects: dark green boxes.
+- ordinary grass: shaded green terrain;
+- paths: warm dirt-colored terrain;
+- tall grass: darker green meadow regions;
+- water: translucent blue surface with a darker depth layer;
+- stone / raised terrain: gray highland and plaza surfaces;
+- trees: low-poly cylinder trunks with layered low-poly canopies;
+- bridges: generated wooden deck geometry;
+- decoration: sparse rocks and shrubs placed deterministically.
 
-There are no world tilesheets, route-map textures, imported terrain models, PDSMS assets, or external world-art setup steps. The terrain layout, elevation, collision, navigation, water, bridges, and forest positions remain procedural.
+There are still no world tilesheets, route-map textures, imported terrain models, PDSMS assets, or external world-art setup steps. All world geometry and materials are generated at runtime from built-in Godot primitives and procedural meshes.
+
+The world builder also folds any tiny unreachable land pockets back into surrounding woodland before collision/navigation are constructed, so visible open regions remain part of the main explorable landmass.
 
 ## installing the Pokémon sprite folder
 
-Character sprites are separate from the world-art prototype. The project expects numbered Pokémon folders inside:
+Character sprites are separate from the procedural world. The project expects numbered Pokémon folders inside:
 
 ```text
 res://assets/pokemon/hgss_overworld/
@@ -74,8 +81,9 @@ Controls:
 - WASD, arrow keys, or left stick: move.
 - Explore north for the highlands.
 - Follow the east route to the raised plaza.
-- Cross the river at the bridge routes.
-- Explore the western woodland and southern encounter fields.
+- Use the western and southern links to make loops rather than backtracking.
+- Cross the river at the north, central, or southern bridge.
+- Explore the woodland clearings and southern meadow regions.
 
 ## architecture
 
@@ -107,7 +115,7 @@ scripts/
     └── wild_pokemon_spawner.gd
 ```
 
-`HgssWorldBuilder` owns the procedural layout, flat-color terrain and forest markers, elevation, static collision, water boundaries, entry points, and walkable-position queries. `HgssWorldNavigation` owns the shared grid pathfinder. `WildPokemonSpawner` owns population policy.
+`HgssWorldBuilder` owns the procedural terrain classification, connectivity cleanup, visual geometry, elevation, static collision, water boundaries, scenery batching, entry points, and walkable-position queries. `HgssWorldNavigation` owns the shared grid pathfinder. `WildPokemonSpawner` owns population policy.
 
 ## temporary player art
 
