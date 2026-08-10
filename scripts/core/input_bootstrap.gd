@@ -5,6 +5,10 @@ func _enter_tree() -> void: # Registers the project's named keyboard and gamepad
     _ensure_axis_action(&"StickLeft_South", KEY_S, KEY_DOWN, JOY_AXIS_LEFT_Y, 1.0) # Maps backward movement to keyboard and left-stick input.
     _ensure_axis_action(&"StickLeft_West", KEY_A, KEY_LEFT, JOY_AXIS_LEFT_X, -1.0) # Maps left movement to keyboard and left-stick input.
     _ensure_axis_action(&"StickLeft_East", KEY_D, KEY_RIGHT, JOY_AXIS_LEFT_X, 1.0) # Maps right movement to keyboard and left-stick input.
+    _ensure_joy_axis_action(&"StickRight_North", JOY_AXIS_RIGHT_Y, -1.0)
+    _ensure_joy_axis_action(&"StickRight_South", JOY_AXIS_RIGHT_Y, 1.0)
+    _ensure_joy_axis_action(&"StickRight_West", JOY_AXIS_RIGHT_X, -1.0)
+    _ensure_joy_axis_action(&"StickRight_East", JOY_AXIS_RIGHT_X, 1.0)
     _ensure_button_action(&"Button_A", KEY_SPACE, JOY_BUTTON_A) # Maps the primary action button for later interactions.
     _ensure_button_action(&"Button_Start", KEY_ESCAPE, JOY_BUTTON_START) # Maps the start button for later menu handling.
 
@@ -22,6 +26,15 @@ func _ensure_axis_action(action: StringName, primary_key: Key, alternate_key: Ke
     axis_event.axis = axis # Selects the appropriate left-stick axis.
     axis_event.axis_value = axis_value # Selects the positive or negative side of the axis.
     InputMap.action_add_event(action, axis_event) # Adds the gamepad-stick binding to the action.
+
+func _ensure_joy_axis_action(action: StringName, axis: JoyAxis, axis_value: float) -> void:
+    if InputMap.has_action(action):
+        return
+    InputMap.add_action(action, 0.2)
+    var axis_event: InputEventJoypadMotion = InputEventJoypadMotion.new()
+    axis_event.axis = axis
+    axis_event.axis_value = axis_value
+    InputMap.action_add_event(action, axis_event)
 
 func _ensure_button_action(action: StringName, keyboard_key: Key, joy_button: JoyButton) -> void: # Adds one digital action only when the project does not already define it.
     if InputMap.has_action(action): # Preserves any action configuration the project already contains.
