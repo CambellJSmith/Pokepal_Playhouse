@@ -51,7 +51,7 @@ script = ExtResource("3_spawner")
 [node name="hud" type="CanvasLayer" parent="."]
 
 [node name="margin" type="MarginContainer" parent="hud"]
-offset_right = 590.0
+offset_right = 710.0
 offset_bottom = 120.0
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 16
@@ -70,7 +70,7 @@ text = "Poképal Playhouse — Generation IV type world"
 
 [node name="controls" type="Label" parent="hud/margin/panel/text"]
 layout_mode = 2
-text = "wasd / arrows / left stick  •  move    Esc / Start  •  map\n17 biome landmarks with map fast travel"
+text = "wasd / arrows / left stick  •  move    right mouse / right stick  •  orbit    wheel  •  zoom\nEsc / Start  •  map    17 biome landmarks with fast travel"
 
 [node name="world_map" type="CanvasLayer" parent="."]
 script = ExtResource("5_map")
