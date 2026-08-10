@@ -1,7 +1,10 @@
 class_name HgssWorldVisibilityFix # Applies a defensive rendering fix to generated terrain after the world builder has created its meshes.
-extends Node # Runs once after the world-builder sibling has completed its ready step.
+extends Node # Runs once after the generated-world scene has completed its startup work.
 
-func _ready() -> void: # Makes generated terrain double-sided so procedural winding cannot hide the world from the camera.
+func _ready() -> void: # Defers the visibility pass until every sibling has completed its ready step.
+    call_deferred(&"_apply_visibility_fix") # Avoids depending on sibling-ready ordering while keeping the fix outside the per-frame loop.
+
+func _apply_visibility_fix() -> void: # Makes generated terrain double-sided so procedural winding cannot hide the world from the camera.
     var world_builder: HgssWorldBuilder = get_tree().get_first_node_in_group(&"world_builder") as HgssWorldBuilder # Resolves the generated world through its semantic group rather than a fragile scene path.
     if world_builder == null: # Detects a malformed main scene with no generated-world component.
         push_error("HgssWorldVisibilityFix could not find the world builder.") # Makes a missing world-builder dependency obvious in the debugger.
