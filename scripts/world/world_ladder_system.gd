@@ -6,7 +6,6 @@ const MIN_REGION_CELLS: int = 6 # Ignores tiny isolated fragments that are not m
 const MAX_REGION_HEIGHT_RANGE: float = 2.2 # Requires an isolated component to remain broadly flat before it qualifies for a ladder.
 const MAX_WALK_STEP_HEIGHT: float = 1.15 # Treats adjacent walkable cells within this vertical change as ordinary walking connectivity.
 const MIN_LADDER_HEIGHT: float = 1.75 # Requires a genuine inaccessible vertical transition before adding a ladder.
-const REBUILD_CHUNK_DISTANCE: int = 1 # Reanalyzes only after the player crosses into another terrain chunk.
 
 var world_builder: RadialWorldBuilder # References the active infinite terrain service.
 var player_reference: Node3D # Tracks the main character used to center local accessibility analysis.
@@ -77,11 +76,11 @@ func _rebuild_ladders(center_chunk: Vector2i) -> void: # Finds isolated walkable
     _build_batch(ladder_root, "ladder_rungs", rung_transforms) # Uploads all rungs through one MultiMesh batch.
 
 func _collect_walkable_region(start_cell: Vector2i, minimum_cell: Vector2i, maximum_cell: Vector2i, visited: Dictionary[Vector2i, bool], region: Array[Vector2i]) -> bool: # Flood-fills cells reachable from one another by ordinary walking only.
-    var queue: Array[Vector2i] = [start_cell] # Starts breadth-first traversal from the first usable cell.
+    var stack: Array[Vector2i] = [start_cell] # Starts depth-first traversal from the first usable cell with constant-time tail removal.
     visited[start_cell] = true # Marks the seed immediately so neighbors cannot enqueue it twice.
     var touches_window_edge: bool = false # Tracks whether this component continues beyond the analysis window.
-    while not queue.is_empty(): # Processes every walking-connected cell in the current component.
-        var cell: Vector2i = queue.pop_front() # Takes the next breadth-first cell.
+    while not stack.is_empty(): # Processes every walking-connected cell in the current component.
+        var cell: Vector2i = stack.pop_back() # Takes the next cell without shifting the remaining array.
         region.append(cell) # Adds the cell to this component's final membership list.
         if cell.x == minimum_cell.x or cell.x == maximum_cell.x or cell.y == minimum_cell.y or cell.y == maximum_cell.y: # Detects components touching the unknown outside world.
             touches_window_edge = true # Marks the region as incomplete for conservative ladder decisions.
@@ -90,13 +89,13 @@ func _collect_walkable_region(start_cell: Vector2i, minimum_cell: Vector2i, maxi
             if neighbor.x < minimum_cell.x or neighbor.x > maximum_cell.x or neighbor.y < minimum_cell.y or neighbor.y > maximum_cell.y: # Rejects neighbors outside the bounded analysis window.
                 continue # Leaves unknown terrain for a later analysis centered closer to it.
             if visited.has(neighbor): # Skips cells already classified by this or another traversal.
-                continue # Prevents duplicate queue entries.
+                continue # Prevents duplicate stack entries.
             if not world_builder.is_cell_walkable(neighbor): # Rejects steep neighbor surfaces as ordinary walking destinations.
-                continue # Leaves the cell available for later classification as non-walkable terrain.
+                continue # Leaves the cell for the outer scan to mark as unusable terrain.
             if not _cells_connect_by_walking(cell, neighbor): # Rejects excessive vertical steps between otherwise flat neighboring cells.
                 continue # Preserves true cliff separation between plateaus and pits.
             visited[neighbor] = true # Claims the valid walking neighbor for this component.
-            queue.append(neighbor) # Continues breadth-first traversal through ordinary walking links.
+            stack.append(neighbor) # Continues depth-first traversal through ordinary walking links.
     return touches_window_edge # Reports whether the component is fully enclosed inside the known terrain window.
 
 func _cells_connect_by_walking(cell_a: Vector2i, cell_b: Vector2i) -> bool: # Tests whether two neighboring usable cells can be crossed without a ladder.
@@ -186,7 +185,7 @@ func _add_ladder(root: Node3D, rail_transforms: Array[Transform3D], rung_transfo
 
 func _build_batch(root: Node3D, node_name: String, transforms: Array[Transform3D]) -> void: # Builds one MultiMesh batch for repeated ladder pieces.
     if transforms.is_empty(): # Avoids creating empty render resources when no ladders are required.
-        return # Leaves the root marker-only or empty as appropriate.
+        return # Leaves the root empty when no visuals are needed.
     var multi_mesh: MultiMesh = MultiMesh.new() # Allocates one GPU-friendly repeated-instance buffer.
     multi_mesh.transform_format = MultiMesh.TRANSFORM_3D # Stores complete 3D transforms for each ladder piece.
     multi_mesh.mesh = ladder_mesh # Reuses the shared unit box geometry for every rail or rung.
