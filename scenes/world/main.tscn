@@ -1,9 +1,9 @@
 [gd_scene format=3 uid="uid://eav3r6quw3e4"]
 
 [ext_resource type="PackedScene" path="res://scenes/characters/player.tscn" id="1_player"]
-[ext_resource type="Script" uid="uid://bclofssoykepy" path="res://scripts/world/hgss_world_builder.gd" id="2_world"]
+[ext_resource type="Script" path="res://scripts/world/radial_world_builder.gd" id="2_world"]
 [ext_resource type="Script" uid="uid://b3mt34nce6w2t" path="res://scripts/world/wild_pokemon_spawner.gd" id="3_spawner"]
-[ext_resource type="Script" uid="uid://c1kjbkk8ju4k6" path="res://scripts/world/world_landmark_system.gd" id="4_landmarks"]
+[ext_resource type="Script" path="res://scripts/world/radial_world_landmark_system.gd" id="4_landmarks"]
 [ext_resource type="Script" uid="uid://cmi21lpg7f50j" path="res://scripts/ui/world_map_overlay.gd" id="5_map"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_landscape"]
@@ -28,8 +28,8 @@ reflected_light_source = 2
 fog_enabled = true
 fog_light_color = Color(0.43, 0.53, 0.59, 1)
 fog_light_energy = 0.55
-fog_density = 0.0010
-fog_sky_affect = 0.35
+fog_density = 0.0045
+fog_sky_affect = 0.52
 tonemap_mode = 0
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_hud"]
@@ -86,12 +86,11 @@ layout_mode = 2
 [node name="title" type="Label" parent="hud/margin/panel/text" unique_id=890190821]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
-text = "poképal playhouse — explore the wilds"
+text = "poképal playhouse — infinite radial wilds"
 
 [node name="controls" type="Label" parent="hud/margin/panel/text" unique_id=2499083]
 layout_mode = 2
-text = "wasd / arrows / left stick  •  move    right mouse / right stick  •  orbit    wheel  •  zoom
-Esc / Start  •  world map and fast travel"
+text = "wasd / arrows / left stick  •  move    right mouse / right stick  •  orbit    wheel  •  zoom\nEsc / Start  •  world map and fast travel"
 
 [node name="world_map" type="CanvasLayer" parent="." unique_id=1352453810]
 script = ExtResource("5_map")
