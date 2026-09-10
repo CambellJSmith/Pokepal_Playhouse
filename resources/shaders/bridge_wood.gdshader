@@ -1,4 +1,5 @@
 shader_type spatial; // Shades continuous ground-aligned bridge decking.
+render_mode cull_disabled; // Keeps the thin ground-aligned deck visible from either side despite generated triangle orientation.
 
 void fragment() { // Draws restrained plank joints and wood grain along each crossing.
     float joint = smoothstep(0.94, 0.99, fract(UV.x * 3.2)); // Separates planks across the direction of travel.
