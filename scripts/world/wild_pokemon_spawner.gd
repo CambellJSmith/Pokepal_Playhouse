@@ -1,17 +1,17 @@
 class_name WildPokemonSpawner # Creates temporary Pokémon using habitat-aware, camera-safe, varied encounter rules.
 extends Node3D # Owns active roaming Pokémon without owning terrain-generation policy.
 
-const WILD_POKEMON_SCENE: PackedScene = preload("res://scenes/characters/wild_pokemon.tscn") # Keeps the reusable roaming character scene ready for inexpensive instantiation.
-const RADIAL_MIN_SPAWN_RADIUS: float = 20.0 # Keeps new wildlife far enough from the player to avoid obvious arrival pop-in.
+const WILD_POKEMON_SCENE: PackedScene = preload("res://scenes/characters/wild_pokemon.tscn") # Keeps the reusable overworld Pokémon scene ready for inexpensive instantiation.
+const RADIAL_MIN_SPAWN_RADIUS: float = 20.0 # Keeps new wildlife far enough from the player to avoid obvious nearby arrival.
 const RADIAL_MAX_SPAWN_RADIUS: float = 54.0 # Keeps new wildlife inside the useful streamed neighborhood around the player.
 const RADIAL_INITIAL_WANDER_RADIUS: float = 14.0 # Gives newly spawned wildlife a varied first movement target inside its habitat.
-const RADIAL_POSITION_ATTEMPTS: int = 18 # Bounds terrain and occlusion work for each requested individual.
+const RADIAL_POSITION_ATTEMPTS: int = 18 # Bounds terrain, density, visibility, and occlusion work for each requested individual.
 const LOCAL_DENSITY_RADIUS: float = 10.0 # Defines the neighborhood used to prevent implausible spawn stacking.
 const LOCAL_DENSITY_LIMIT: int = 3 # Prevents too many roaming Pokémon from occupying one small patch.
 const RECENT_SPECIES_LIMIT: int = 10 # Keeps a short encounter history so the same species does not dominate successive spawns.
-const OCCLUSION_COLLISION_MASK: int = 1 # Tests camera occlusion against the world collision layer used by generated terrain and static geometry.
-const OCCLUSION_END_CLEARANCE: float = 0.55 # Requires the blocking surface to occur meaningfully before the candidate body sample.
-const OCCLUSION_SAMPLE_OFFSETS: Array[Vector3] = [Vector3(0.0, 0.30, 0.0), Vector3(0.0, 0.95, 0.0), Vector3(0.0, 1.65, 0.0), Vector3(-0.42, 1.05, 0.0), Vector3(0.42, 1.05, 0.0)] # Covers feet, torso, head, and both sides so partially exposed candidates are rejected.
+const OCCLUSION_COLLISION_MASK: int = 1 # Tests camera occlusion against generated terrain and other static world geometry.
+const OCCLUSION_END_CLEARANCE: float = 0.55 # Requires an obstruction to occur meaningfully before the candidate body sample.
+const VISIBILITY_SAMPLE_OFFSETS: Array[Vector3] = [Vector3(0.0, 0.25, 0.0), Vector3(0.0, 0.95, 0.0), Vector3(0.0, 1.70, 0.0), Vector3(-0.48, 0.35, 0.0), Vector3(0.48, 0.35, 0.0), Vector3(-0.48, 1.00, 0.0), Vector3(0.48, 1.00, 0.0), Vector3(-0.48, 1.65, 0.0), Vector3(0.48, 1.65, 0.0)] # Samples the body silhouette so edge-of-screen or partially exposed spawns are rejected.
 
 var random: RandomNumberGenerator = RandomNumberGenerator.new() # Provides independent spawn timing, species selection, form selection, and behaviour seeds.
 var species_directories: PackedStringArray = PackedStringArray() # Stores installed National Dex sprite folders discovered lazily by the sprite library.
@@ -40,17 +40,17 @@ func _ready() -> void: # Resolves dependencies, indexes habitat pools, and sched
     _index_species_by_biome() # Builds fast habitat pools once instead of scanning the whole catalogue for every spawn.
     _reset_spawn_countdown() # Schedules the first bounded wildlife spawn attempt.
 
-func _physics_process(delta: float) -> void: # Advances spawn timing and performs physics-safe camera occlusion queries.
+func _physics_process(delta: float) -> void: # Advances spawn timing and performs physics-safe visibility and occlusion queries.
     if world_builder == null or species_directories.is_empty(): # Rejects processing when required world or sprite data is unavailable.
         return # Avoids needless per-frame work from an inactive spawner.
     if get_child_count() >= max_active_pokemon: # Enforces the global active wildlife population cap.
         spawn_countdown = maxf(spawn_countdown, 0.35) # Prevents an immediate burst the instant one crowded visitor despawns.
         return # Waits until population pressure falls before attempting another encounter.
-    spawn_countdown -= delta # Advances the spawn timer inside the physics callback required for direct-space ray queries.
+    spawn_countdown -= delta # Advances the spawn timer inside the physics callback used for direct-space ray queries.
     if spawn_countdown > 0.0: # Detects whether the next attempt is still scheduled in the future.
-        return # Avoids terrain, species, and ray work until the timer expires.
+        return # Avoids terrain, species, and camera work until the timer expires.
     _spawn_random_pokemon() # Attempts one varied encounter using the active world's spawning policy.
-    _reset_spawn_countdown() # Schedules the next attempt independently of whether current camera occlusion allowed a spawn.
+    _reset_spawn_countdown() # Schedules the next attempt independently of whether the current camera allowed a spawn.
 
 func _index_species_by_biome() -> void: # Groups installed species by Generation IV primary-type biome for fast repeated selection.
     species_by_biome.clear() # Removes stale pool data before rebuilding from the currently installed sprite catalogue.
@@ -64,7 +64,7 @@ func _index_species_by_biome() -> void: # Groups installed species by Generation
 
 func _spawn_random_pokemon() -> void: # Routes spawning through finite-world or local infinite-world policy without duplicating character setup.
     if world_builder is RadialWorldBuilder: # Detects the streamed infinite radial topology used by the active main world.
-        _spawn_radial_encounter(world_builder as RadialWorldBuilder) # Uses smarter local population and strict camera occlusion rules.
+        _spawn_radial_encounter(world_builder as RadialWorldBuilder) # Uses smarter local population and camera-safe visibility rules.
         return # Prevents the legacy finite-world entry policy from creating distant bodies.
     _spawn_finite_world_pokemon() # Preserves the original finite-world policy for alternate world implementations.
 
@@ -73,7 +73,7 @@ func _spawn_radial_encounter(radial_world: RadialWorldBuilder) -> void: # Create
         player_reference = get_tree().get_first_node_in_group(&"player") as Node3D # Re-resolves the semantic player dependency only when necessary.
     if player_reference == null: # Handles malformed radial scenes without inventing a fallback spawn origin.
         return # Defers spawning until a valid player exists.
-    var camera: Camera3D = get_viewport().get_camera_3d() # Reads the active gameplay camera used for strict occlusion validation.
+    var camera: Camera3D = get_viewport().get_camera_3d() # Reads the active gameplay camera used for pop-in prevention.
     if camera == null: # Refuses to spawn when visibility cannot be evaluated reliably.
         return # Waits for an active camera rather than risking visible pop-in.
     var biome_kind: int = radial_world.get_biome_kind_at_world_position(player_reference.global_position) # Uses the player's current radial habitat as the encounter type.
@@ -81,17 +81,16 @@ func _spawn_radial_encounter(radial_world: RadialWorldBuilder) -> void: # Create
     if species_directory.is_empty(): # Handles habitats with no installed matching species.
         return # Skips the encounter instead of substituting an incorrect type.
     var encounter_size: int = _choose_encounter_size() # Produces mostly solo encounters with occasional pairs and compact groups.
-    encounter_size = mini(encounter_size, max_active_pokemon - get_child_count()) # Respects the global population cap before doing any placement work.
+    encounter_size = mini(encounter_size, max_active_pokemon - get_child_count()) # Respects the global population cap before doing placement work.
     if encounter_size <= 0: # Handles a population race where the cap was reached during this frame.
         return # Avoids unnecessary form and terrain work.
-    var anchor_position: Vector3 = _find_fully_occluded_spawn_position(radial_world, biome_kind, camera, player_reference.global_position, RADIAL_MAX_SPAWN_RADIUS) # Finds one camera-hidden anchor in the preferred distance band.
-    if anchor_position == Vector3.INF: # Detects that no fully occluded practical position was found inside the bounded attempt budget.
-        return # Refuses to spawn anywhere merely off-screen or exposed.
-    var spawned_count: int = 0 # Tracks successfully created members of this encounter.
+    var anchor_position: Vector3 = _find_hidden_spawn_position(radial_world, biome_kind, camera, player_reference.global_position, RADIAL_MAX_SPAWN_RADIUS) # Finds a valid point that the camera cannot currently see.
+    if anchor_position == Vector3.INF: # Detects that no safe position was found inside the bounded attempt budget.
+        return # Refuses to create a Pokémon where its appearance could be observed.
     for member_index: int in range(encounter_size): # Attempts each solo, pair, or group member independently.
         var entry_position: Vector3 = anchor_position # Uses the validated anchor directly for the first member.
         if member_index > 0: # Gives companions their own nearby hidden positions rather than stacking bodies exactly together.
-            entry_position = _find_fully_occluded_spawn_position(radial_world, biome_kind, camera, anchor_position, 6.5) # Searches a compact neighborhood around the encounter anchor.
+            entry_position = _find_hidden_spawn_position(radial_world, biome_kind, camera, anchor_position, 6.5) # Searches a compact neighborhood around the encounter anchor.
             if entry_position == Vector3.INF: # Allows a smaller group when nearby terrain is visible or crowded.
                 continue # Skips only this companion rather than discarding the already valid encounter.
         if _count_pokemon_near(entry_position, LOCAL_DENSITY_RADIUS) >= LOCAL_DENSITY_LIMIT: # Prevents groups from creating implausible local crowding.
@@ -105,54 +104,58 @@ func _spawn_radial_encounter(radial_world: RadialWorldBuilder) -> void: # Create
         if sprite_directory.is_empty(): # Rejects incomplete forms without constructing a partially configured character.
             continue # Lets other planned encounter members continue normally.
         var initial_target: Vector3 = radial_world.get_random_walkable_world_position_near_in_biome(entry_position, RADIAL_INITIAL_WANDER_RADIUS, biome_kind, random) # Gives this visitor an independent first destination inside the same habitat.
-        _create_pokemon(sprite_directory, entry_position, initial_target, biome_kind) # Instantiates the fully validated hidden visitor.
+        _create_pokemon(sprite_directory, entry_position, initial_target, biome_kind) # Instantiates the fully validated unseen visitor.
         _remember_species(member_species) # Lowers immediate repetition probability for subsequent encounters.
-        spawned_count += 1 # Records one successful member for adaptive pacing and diagnostics.
-    if spawned_count == 0: # Handles rare cases where the anchor was valid but density or asset checks rejected every member.
-        return # Leaves pacing to the normal countdown reset without modifying recent-species history.
 
-func _find_fully_occluded_spawn_position(radial_world: RadialWorldBuilder, biome_kind: int, camera: Camera3D, search_origin: Vector3, search_radius: float) -> Vector3: # Finds practical terrain that is completely hidden from the active camera by static world geometry.
-    for attempt: int in range(RADIAL_POSITION_ATTEMPTS): # Bounds terrain, density, and raycast cost for one requested individual.
+func _find_hidden_spawn_position(radial_world: RadialWorldBuilder, biome_kind: int, camera: Camera3D, search_origin: Vector3, search_radius: float) -> Vector3: # Finds practical terrain where spawning cannot currently be observed by the active camera.
+    for attempt: int in range(RADIAL_POSITION_ATTEMPTS): # Bounds terrain, density, frustum, and raycast cost for one requested individual.
         var candidate: Vector3 = radial_world.get_random_walkable_world_position_near_in_biome(search_origin, search_radius, biome_kind, random) # Samples practical habitat terrain using the world's deterministic walkability service.
         if radial_world.get_biome_kind_at_world_position(candidate) != biome_kind: # Defends against edge cases near warped biome boundaries.
             continue # Keeps every encounter member inside the intended habitat.
         var distance_from_player: float = candidate.distance_to(player_reference.global_position) # Measures player separation for natural arrival spacing.
         if search_origin == player_reference.global_position and distance_from_player < RADIAL_MIN_SPAWN_RADIUS: # Applies the larger safety annulus only to primary encounter anchors.
-            continue # Prevents wildlife from materializing immediately beside the player even behind a tiny obstacle.
-        if _count_pokemon_near(candidate, LOCAL_DENSITY_RADIUS) >= LOCAL_DENSITY_LIMIT: # Rejects already crowded terrain patches before paying for raycasts.
+            continue # Prevents wildlife from materializing immediately beside the player even when outside the current view.
+        if _count_pokemon_near(candidate, LOCAL_DENSITY_RADIUS) >= LOCAL_DENSITY_LIMIT: # Rejects already crowded terrain patches before paying for visibility work.
             continue # Encourages population to spread around the explored environment.
-        if not _is_fully_occluded_from_camera(candidate, camera): # Requires every representative body sample to be blocked by static world geometry.
-            continue # Rejects candidates that are off-screen, behind-camera, or only partially hidden without genuine occlusion.
-        return candidate # Returns the first practical, uncrowded, fully occluded candidate.
+        if not _is_hidden_from_camera(candidate, camera): # Rejects only positions where some part of the Pokémon would actually be visible now.
+            continue # Prevents observable pop-in while allowing off-screen, behind-camera, and physically occluded candidates.
+        return candidate # Returns the first practical, uncrowded, unseen candidate.
     return Vector3.INF # Reports failure without falling back to a potentially visible spawn.
 
-func _is_fully_occluded_from_camera(candidate: Vector3, camera: Camera3D) -> bool: # Verifies that the complete approximate Pokémon body is hidden by static geometry from the active camera.
-    var camera_origin: Vector3 = camera.global_position # Uses the physical camera location as the source of every visibility ray.
-    var camera_right: Vector3 = camera.global_transform.basis.x.normalized() # Uses camera-right so lateral body samples correspond to what the player can actually see.
-    var exclusions: Array[RID] = _build_occlusion_exclusions() # Prevents the player and existing Pokémon from masquerading as valid world occluders.
+func _is_hidden_from_camera(candidate: Vector3, camera: Camera3D) -> bool: # Allows off-screen or occluded spawning while preventing any sampled body point from visibly popping in.
+    var camera_origin: Vector3 = camera.global_position # Uses the physical camera location as the source of visibility rays.
+    var camera_right: Vector3 = camera.global_transform.basis.x.normalized() # Uses camera-right so lateral samples correspond to the billboard silhouette on screen.
+    var exclusions: Array[RID] = _build_occlusion_exclusions() # Prevents the player and existing Pokémon from masquerading as world occluders.
     var space_state: PhysicsDirectSpaceState3D = get_world_3d().direct_space_state # Accesses the physics space safely from the spawner's physics callback.
-    for offset: Vector3 in OCCLUSION_SAMPLE_OFFSETS: # Tests multiple vertical and lateral points across the approximate billboard body.
-        var sample_position: Vector3 = candidate + Vector3.UP * offset.y + camera_right * offset.x # Converts the local body sample into a camera-relative world point.
-        var sample_distance: float = camera_origin.distance_to(sample_position) # Measures total unobstructed distance to this body sample.
-        if sample_distance <= OCCLUSION_END_CLEARANCE: # Rejects nonsensical candidates effectively occupying the camera itself.
-            return false # Prevents a degenerate ray from being interpreted as hidden.
-        var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(camera_origin, sample_position, OCCLUSION_COLLISION_MASK, exclusions) # Builds one allocation-contained world visibility query.
-        query.collide_with_areas = false # Prevents trigger volumes from counting as visual occluders.
-        query.collide_with_bodies = true # Includes terrain and other physical world geometry.
-        query.hit_back_faces = true # Allows cliffs and terrain triangles to occlude consistently from either sampled direction.
-        var result: Dictionary = space_state.intersect_ray(query) # Finds the first physical object between the camera and this body sample.
-        if result.is_empty(): # Detects a completely clear camera ray.
-            return false # Rejects the candidate because at least one part of its body would be visible.
-        var collider: Object = result.get("collider") as Object # Reads the physical object responsible for the first obstruction.
-        if not collider is StaticBody3D: # Rejects dynamic characters or other transient bodies as valid spawn concealment.
-            return false # Requires stable world geometry to hide every body sample.
-        var hit_position: Vector3 = result.get("position", sample_position) # Reads the obstruction point in global coordinates.
-        if camera_origin.distance_to(hit_position) >= sample_distance - OCCLUSION_END_CLEARANCE: # Detects terrain hit only at or immediately beneath the candidate endpoint.
-            return false # Prevents the candidate's own ground contact from falsely satisfying occlusion.
-    return true # Confirms every tested body point is genuinely blocked by static world geometry.
+    for offset: Vector3 in VISIBILITY_SAMPLE_OFFSETS: # Tests representative points around the approximate complete Pokémon silhouette.
+        var sample_position: Vector3 = candidate + Vector3.UP * offset.y + camera_right * offset.x # Converts one body sample into camera-relative world coordinates.
+        if camera.is_position_behind(sample_position): # Detects samples that cannot be rendered in front of the active camera.
+            continue # Treats behind-camera body points as safely unseen without an unnecessary raycast.
+        if not camera.is_position_in_frustum(sample_position): # Detects samples outside the active camera's visible frustum.
+            continue # Treats off-screen body points as safely unseen without requiring physical cover.
+        if _camera_has_clear_view(camera_origin, sample_position, space_state, exclusions): # Tests whether an in-frustum body point has an unobstructed world-space line of sight.
+            return false # Rejects the whole spawn because the player could see this part appear.
+    return true # Allows the spawn only when every sampled point is off-screen, behind-camera, or physically occluded.
 
-func _build_occlusion_exclusions() -> Array[RID]: # Builds a small dynamic exclusion list for strict world-only camera occlusion rays.
-    var exclusions: Array[RID] = [] # Stores collision-object RIDs ignored by the visibility queries.
+func _camera_has_clear_view(camera_origin: Vector3, sample_position: Vector3, space_state: PhysicsDirectSpaceState3D, exclusions: Array[RID]) -> bool: # Returns true when no stable world geometry hides an in-frustum body sample.
+    var sample_distance: float = camera_origin.distance_to(sample_position) # Measures total camera-to-sample distance for endpoint clearance checks.
+    if sample_distance <= OCCLUSION_END_CLEARANCE: # Treats an effectively camera-overlapping candidate as visibly unsafe.
+        return true # Rejects degenerate near-camera spawns without issuing a ray.
+    var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(camera_origin, sample_position, OCCLUSION_COLLISION_MASK, exclusions) # Builds one world visibility ray query.
+    query.collide_with_areas = false # Prevents trigger volumes from counting as visual cover.
+    query.collide_with_bodies = true # Includes terrain and other physical geometry.
+    query.hit_back_faces = true # Lets cliffs and terrain triangles occlude consistently from either sampled direction.
+    var result: Dictionary = space_state.intersect_ray(query) # Finds the first physical object between the camera and this body sample.
+    if result.is_empty(): # Detects a completely clear camera ray.
+        return true # Reports that this body point would be visibly exposed.
+    var collider: Object = result.get("collider") as Object # Reads the physical object responsible for the first obstruction.
+    if not collider is StaticBody3D: # Rejects dynamic or transient bodies as dependable spawn concealment.
+        return true # Treats the sample as visible so characters cannot hide new pop-in.
+    var hit_position: Vector3 = result.get("position", sample_position) # Reads the obstruction point in global coordinates.
+    return camera_origin.distance_to(hit_position) >= sample_distance - OCCLUSION_END_CLEARANCE # Treats endpoint-only terrain contact as exposed rather than legitimate cover.
+
+func _build_occlusion_exclusions() -> Array[RID]: # Builds a small dynamic exclusion list for world-only camera occlusion rays.
+    var exclusions: Array[RID] = [] # Stores collision-object RIDs ignored by visibility queries.
     if player_reference is CollisionObject3D: # Excludes the player so their own body cannot hide a nearby spawn from the camera.
         exclusions.append((player_reference as CollisionObject3D).get_rid()) # Adds the player's current physics RID to every query.
     for child: Node in get_children(): # Visits only active roaming Pokémon owned by this spawner.
