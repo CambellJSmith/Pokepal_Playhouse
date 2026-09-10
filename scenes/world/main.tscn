@@ -5,6 +5,7 @@
 [ext_resource type="Script" uid="uid://b3mt34nce6w2t" path="res://scripts/world/wild_pokemon_spawner.gd" id="3_spawner"]
 [ext_resource type="Script" path="res://scripts/world/radial_world_landmark_system.gd" id="4_landmarks"]
 [ext_resource type="Script" uid="uid://cmi21lpg7f50j" path="res://scripts/ui/world_map_overlay.gd" id="5_map"]
+[ext_resource type="Script" path="res://scripts/world/world_ladder_system.gd" id="6_ladders"]
 
 [sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_landscape"]
 sky_top_color = Color(0.26, 0.47, 0.67, 1)
@@ -65,6 +66,9 @@ script = ExtResource("4_landmarks")
 [node name="player" parent="." unique_id=918382089 instance=ExtResource("1_player")]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.0, 69)
 
+[node name="world_ladders" type="Node3D" parent="."]
+script = ExtResource("6_ladders")
+
 [node name="wild_pokemon_spawner" type="Node3D" parent="." unique_id=2121055228]
 script = ExtResource("3_spawner")
 
@@ -90,7 +94,7 @@ text = "poképal playhouse — infinite radial wilds"
 
 [node name="controls" type="Label" parent="hud/margin/panel/text" unique_id=2499083]
 layout_mode = 2
-text = "wasd / arrows / left stick  •  move    right mouse / right stick  •  orbit    wheel  •  zoom\nEsc / Start  •  world map and fast travel"
+text = "wasd / arrows / left stick  •  move    shift / L3  •  sprint    right mouse / right stick  •  orbit    wheel  •  zoom\nEsc / Start  •  world map and fast travel"
 
 [node name="world_map" type="CanvasLayer" parent="." unique_id=1352453810]
 script = ExtResource("5_map")
