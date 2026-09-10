@@ -76,26 +76,18 @@ func sample_height(cell_position: Vector2) -> float: # Produces continuous terra
     var broad: float = height_noise.get_noise_2d(cell_position.x, cell_position.y) # Samples broad terrain once at the requested coordinate.
     var detail: float = detail_noise.get_noise_2d(cell_position.x, cell_position.y) # Samples smaller-scale relief once at the requested coordinate.
     var ridge: float = clampf((ridge_noise.get_noise_2d(cell_position.x, cell_position.y) + 1.0) * 0.5, 0.0, 1.0) # Converts ridged noise into a predictable positive contribution.
-    var height: float = 1.2 + broad * 2.1 + detail * 0.65 # Establishes the shared rolling base used across every region.
-    match biome_kind: # Applies broad type-specific landform character without finite regional centres.
-        1: height += 2.2 + ridge * 3.5 # Builds rough elevated volcanic terrain for Fire.
-        2: height -= 1.1 # Keeps the Water world visually lower without making traversal impossible.
-        4: height += detail * 0.8 # Adds organic undulation beneath denser Grass vegetation.
-        5: height += 2.4 + broad * 0.8 # Produces an open elevated Ice shelf.
-        8: height += ridge * 2.8 # Adds repeated Ground badland ridges.
-        9: height += 2.8 + broad * 0.6 # Raises the Flying world into an open high plateau.
-        12: height += 3.0 + ridge * 6.0 # Gives the Rock sector strong mountain relief.
-        13: height -= 0.9 # Drops the Ghost world into a shallow hollow.
-        14: height += 4.0 + ridge * 7.0 # Makes the Dragon sector the highest infinite region.
-        15: height -= 0.35 # Keeps the Dark world comparatively sheltered.
-        16: height += 1.8 + broad * 0.35 # Gives the Steel world a flatter raised shelf.
+    var height: float = 1.2 + broad * 2.1 + detail * 0.65 # Establishes the shared rolling base used continuously across every region boundary.
+    if biome_kind != BIOME_NORMAL: # Adds regional relief only outside the shared neutral hub.
+        var relief_weight: float = _get_outer_relief_weight(cell_position) # Fades type-specific elevation to zero at both radial and neighboring-type boundaries.
+        height += _get_biome_relief(biome_kind, broad, detail, ridge) * relief_weight # Preserves distinct regional terrain without introducing boundary cliffs.
     var route_distance: float = sample_route_distance(cell_position) # Reads proximity to an infinite route at the same coordinate.
     if route_distance < 4.5: # Softens severe local noise where characters are expected to travel frequently.
         var route_weight: float = 1.0 - smoothstep(ROUTE_HALF_WIDTH, 4.5, route_distance) # Blends from full route grade into natural terrain.
         var route_base: float = 1.35 + broad * 1.1 # Keeps routes following macro terrain without small steep noise.
         height = lerpf(height, route_base, route_weight * 0.72) # Makes radial travel paths consistently easier to traverse.
     if biome_kind == BIOME_NORMAL: # Keeps the shared central neutral area calmer than the infinite type worlds.
-        var centre_weight: float = 1.0 - smoothstep(0.0, CENTER_RADIUS_CELLS, cell_position.length()) # Increases flattening toward the world origin.
+        var neutral_edge: float = get_neutral_boundary_radius(cell_position) # Reads the actual blobbed central boundary for a matching transition.
+        var centre_weight: float = 1.0 - smoothstep(0.0, maxf(neutral_edge, 1.0), cell_position.length()) # Increases flattening smoothly toward the world origin.
         height = lerpf(height, 1.0 + broad * 0.55, centre_weight * 0.78) # Produces a broad welcoming neutral basin around the central plaza.
     return height # Returns the deterministic terrain elevation for this global cell coordinate.
 
@@ -122,6 +114,32 @@ func get_biome_color(biome_kind: int) -> Color: # Returns the restrained terrain
         15: return Color(0.16, 0.18, 0.17, 1.0) # Uses near-charcoal woodland ground for Dark.
         16: return Color(0.42, 0.44, 0.43, 1.0) # Uses mineral grey terrain for Steel.
     return Color(0.38, 0.48, 0.29, 1.0) # Falls back to the neutral central palette for unexpected values.
+
+func _get_outer_relief_weight(cell_position: Vector2) -> float: # Fades type-specific elevation smoothly near neutral and neighboring-type borders.
+    var radius: float = maxf(cell_position.length(), 0.001) # Measures distance from the hub while avoiding zero-radius division.
+    var neutral_edge: float = get_neutral_boundary_radius(cell_position) # Reads the organic neutral boundary in this direction.
+    var radial_weight: float = smoothstep(0.0, 12.0, radius - neutral_edge) # Introduces outer terrain character gradually after leaving the central hub.
+    var angle: float = fposmod(atan2(cell_position.y, cell_position.x), TAU) # Resolves the raw polar angle at this coordinate.
+    var warp: float = sector_noise.get_noise_2d(cell_position.x, cell_position.y) * SECTOR_ANGLE * 0.28 # Reuses exactly the same border warp as biome ownership.
+    var sector_fraction: float = fposmod(angle + warp + SECTOR_ANGLE * 0.5, SECTOR_ANGLE) / SECTOR_ANGLE # Measures progress across the current warped type sector.
+    var border_distance: float = minf(sector_fraction, 1.0 - sector_fraction) * 2.0 # Converts sector progress into zero-at-border and one-at-centre distance.
+    var angular_weight: float = smoothstep(0.0, 0.34, border_distance) # Fades terrain character across a broad boundary band shared by neighboring types.
+    return radial_weight * angular_weight # Requires both sufficient distance from the hub and sufficient interior distance from type borders.
+
+func _get_biome_relief(biome_kind: int, broad: float, detail: float, ridge: float) -> float: # Returns the signed regional elevation character before boundary blending.
+    match biome_kind: # Keeps type terrain identities compact and independent from topology math.
+        1: return 2.2 + ridge * 3.5 # Builds elevated volcanic terrain for Fire.
+        2: return -1.1 # Keeps the Water world visually lower without creating an abrupt basin wall.
+        4: return detail * 0.8 # Adds organic rolling variation beneath Grass scenery.
+        5: return 2.4 + broad * 0.8 # Produces a broad elevated Ice shelf.
+        8: return ridge * 2.8 # Adds repeated Ground badland ridges.
+        9: return 2.8 + broad * 0.6 # Raises the Flying world into open high terrain.
+        12: return 3.0 + ridge * 6.0 # Gives the Rock world strong mountain relief.
+        13: return -0.9 # Drops the Ghost world into a shallow hollow.
+        14: return 4.0 + ridge * 7.0 # Makes the Dragon world the strongest highland terrain.
+        15: return -0.35 # Keeps the Dark world comparatively sheltered.
+        16: return 1.8 + broad * 0.35 # Gives the Steel world a flatter raised shelf.
+    return 0.0 # Leaves remaining type worlds on the shared continuous base terrain.
 
 func _configure_noise(noise: FastNoiseLite, salt: int, frequency: float, fractal_type: FastNoiseLite.FractalType, octaves: int) -> void: # Applies one compact deterministic FastNoiseLite configuration.
     noise.seed = world_seed + salt # Separates each field while preserving reproducibility from the world seed.
