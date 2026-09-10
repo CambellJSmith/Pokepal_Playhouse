@@ -7,6 +7,12 @@ var ground_acceleration: float = 24.0 # Controls how quickly horizontal movement
 var ground_deceleration: float = 30.0 # Controls how quickly horizontal movement stops after input is released.
 var gravity: float = float(ProjectSettings.get_setting("physics/3d/default_gravity")) # Uses the project's configured 3D gravity.
 
+func _ready() -> void: # Places the player on a verified route beside the central landmark after terrain generation.
+    var world: HgssWorldBuilder = get_tree().get_first_node_in_group(&"world_builder") as HgssWorldBuilder # Resolves the generated terrain service.
+    if world != null: # Waits for a valid generated world before adjusting the spawn.
+        var center: Vector2 = HgssWorldBuilder.BIOME_CENTERS[HgssWorldBuilder.BiomeKind.NORMAL] # Reads the expanded central region anchor.
+        global_position = world.get_nearest_walkable_world_position(Vector3(center.x * HgssWorldBuilder.TILE_SIZE, 0.0, (center.y + 7.0) * HgssWorldBuilder.TILE_SIZE)) # Starts on an actual walkable terrain triangle near the plaza.
+
 func _physics_process(delta: float) -> void: # Applies camera-relative input, gravity, collision movement, and sprite animation each physics frame.
     var camera: Camera3D = get_viewport().get_camera_3d() # Reads the currently active 3D camera for camera-relative controls.
     if camera == null: # Guards startup frames where a camera is not yet active.

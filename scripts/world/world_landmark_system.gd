@@ -128,10 +128,12 @@ func _build_volt_substation(root: Node3D) -> void: # Creates a four-pylon electr
 	_add_box(root, "transformer_left", Vector3(1.3, 1.35, 1.2), Vector3(-0.9, 0.68, 0.0), electric)
 	_add_box(root, "transformer_right", Vector3(1.3, 1.35, 1.2), Vector3(0.9, 0.68, 0.0), electric.darkened(0.12))
 
-func _build_ancient_grove(root: Node3D) -> void: # Creates one oversized ancient tree as the Deep Forest destination.
-	_add_cylinder(root, "ancient_trunk", 0.60, 0.95, 4.5, Vector3(0.0, 2.25, 0.0), Color(0.30, 0.18, 0.08, 1.0), 9)
-	_add_sphere(root, "lower_crown", 2.7, 3.4, Vector3(0.0, 4.3, 0.0), Color(0.12, 0.38, 0.15, 1.0), 10, 5)
-	_add_sphere(root, "upper_crown", 2.1, 2.8, Vector3(0.0, 6.0, 0.0), LANDMARK_COLORS[HgssWorldBuilder.BiomeKind.GRASS], 10, 5)
+func _build_ancient_grove(root: Node3D) -> void: # Builds a mature rooted tree using the same organic woodland art system.
+	var tree: MeshInstance3D = MeshInstance3D.new() # Composes the grove's signature tree into its landmark scene.
+	tree.name = "ancient_tree" # Gives the signature tree a readable inspector name.
+	tree.mesh = WorldSceneryMeshes.tree(0, 1) # Uses a branched tree with a coherent irregular crown.
+	tree.scale = Vector3.ONE * 2.35 # Makes this mature landmark larger than the surrounding young woodland.
+	root.add_child(tree) # Anchors the complete trunk and crown at the landmark's ground position.
 
 func _build_crystal_sanctum(root: Node3D) -> void: # Creates a cluster of tall ice crystals around a low platform.
 	var ice: Color = LANDMARK_COLORS[HgssWorldBuilder.BiomeKind.ICE]
