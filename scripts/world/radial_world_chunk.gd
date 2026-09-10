@@ -19,10 +19,19 @@ func build(coordinate: Vector2i, sampler: RadialWorldFieldSampler, shared_materi
     _build_terrain() # Creates the indexed terrain surface and matching static collision.
     _build_scenery() # Adds inexpensive local MultiMesh scenery without global batching work.
 
-func _build_terrain() -> void: # Creates one indexed grid with seam-free samples from global world coordinates.
+func _build_terrain() -> void: # Creates one indexed grid while sampling each required height only once.
     var vertex_count_per_axis: int = CHUNK_CELLS + 1 # Includes the shared outer vertex row and column for exact chunk continuity.
+    var padded_axis: int = CHUNK_CELLS + 3 # Adds one height-sample border around the visible grid for seam-free normals.
+    var padded_heights: PackedFloat32Array = PackedFloat32Array() # Stores one cached height sample for the visible grid and its normal border.
+    padded_heights.resize(padded_axis * padded_axis) # Allocates the complete local height cache once.
+    var start_cell: Vector2i = chunk_coordinate * CHUNK_CELLS # Resolves this chunk's global logical-cell origin.
+    for padded_z: int in range(padded_axis): # Traverses every cached height row including the border.
+        for padded_x: int in range(padded_axis): # Traverses every cached height sample in the current row.
+            var global_x: float = float(start_cell.x + padded_x - 1) # Resolves the authoritative infinite-world X coordinate for this cached sample.
+            var global_z: float = float(start_cell.y + padded_z - 1) # Resolves the authoritative infinite-world Z coordinate for this cached sample.
+            padded_heights[padded_z * padded_axis + padded_x] = field_sampler.sample_height(Vector2(global_x, global_z)) # Samples each required terrain height exactly once for this chunk build.
     var vertices: PackedVector3Array = PackedVector3Array() # Stores local terrain positions for the ArrayMesh.
-    var normals: PackedVector3Array = PackedVector3Array() # Stores world-consistent lighting normals sampled across chunk boundaries.
+    var normals: PackedVector3Array = PackedVector3Array() # Stores world-consistent lighting normals derived from the padded height cache.
     var colors: PackedColorArray = PackedColorArray() # Stores biome colour at every terrain vertex.
     var route_uv: PackedVector2Array = PackedVector2Array() # Stores route distance in UV2 for the existing landscape shader.
     var indices: PackedInt32Array = PackedInt32Array() # Reuses shared grid vertices across terrain triangles.
@@ -31,14 +40,20 @@ func _build_terrain() -> void: # Creates one indexed grid with seam-free samples
     normals.resize(vertices.size()) # Matches the position buffer exactly.
     colors.resize(vertices.size()) # Matches the position buffer exactly.
     route_uv.resize(vertices.size()) # Matches the position buffer exactly.
-    var start_cell: Vector2i = chunk_coordinate * CHUNK_CELLS # Resolves this chunk's global logical-cell origin.
-    for local_z: int in range(vertex_count_per_axis): # Traverses every shared vertex row in this chunk.
-        for local_x: int in range(vertex_count_per_axis): # Traverses every shared vertex column in this row.
+    for local_z: int in range(vertex_count_per_axis): # Traverses every shared visible vertex row in this chunk.
+        for local_x: int in range(vertex_count_per_axis): # Traverses every shared visible vertex column in this row.
             var global_cell: Vector2 = Vector2(float(start_cell.x + local_x), float(start_cell.y + local_z)) # Resolves the authoritative infinite-world sample coordinate.
             var vertex_index: int = local_z * vertex_count_per_axis + local_x # Resolves the packed array index for this local grid vertex.
-            var height: float = field_sampler.sample_height(global_cell) # Samples deterministic terrain independent of which chunk requested it.
+            var padded_index: int = (local_z + 1) * padded_axis + local_x + 1 # Addresses the same visible vertex inside the one-cell padded height cache.
+            var height: float = padded_heights[padded_index] # Reuses the already sampled terrain height for this vertex.
             vertices[vertex_index] = Vector3(float(local_x) * tile_size, height, float(local_z) * tile_size) # Stores local geometry so large coordinates stay out of vertex buffers.
-            normals[vertex_index] = _sample_normal(global_cell) # Uses neighboring global samples so adjacent chunks share lighting normals.
+            var left_height: float = padded_heights[padded_index - 1] # Reads the cached global left neighbor for the X derivative.
+            var right_height: float = padded_heights[padded_index + 1] # Reads the cached global right neighbor for the X derivative.
+            var near_height: float = padded_heights[padded_index - padded_axis] # Reads the cached global near neighbor for the Z derivative.
+            var far_height: float = padded_heights[padded_index + padded_axis] # Reads the cached global far neighbor for the Z derivative.
+            var dx: float = (right_height - left_height) / (2.0 * tile_size) # Converts the cached X height difference into a world-space gradient.
+            var dz: float = (far_height - near_height) / (2.0 * tile_size) # Converts the cached Z height difference into a world-space gradient.
+            normals[vertex_index] = Vector3(-dx, 1.0, -dz).normalized() # Stores the seam-free upward-facing terrain normal.
             colors[vertex_index] = field_sampler.get_biome_color(field_sampler.sample_biome(global_cell)) # Colours the terrain from the radial topology.
             route_uv[vertex_index] = Vector2(field_sampler.sample_route_distance(global_cell), 0.0) # Feeds radial and ring route distance into terrain shading.
     for local_z: int in range(CHUNK_CELLS): # Traverses every logical cell row for triangle topology.
@@ -84,7 +99,7 @@ func _build_scenery() -> void: # Adds sparse deterministic vegetation and rock d
     for local_z: int in range(1, CHUNK_CELLS, 2): # Samples scenery on a coarser grid to keep generation and instance counts bounded.
         for local_x: int in range(1, CHUNK_CELLS, 2): # Samples alternate cells across each coarse scenery row.
             var global_cell_i: Vector2i = start_cell + Vector2i(local_x, local_z) # Resolves the deterministic integer scenery coordinate.
-            var global_cell: Vector2 = Vector2(global_cell_i) # Converts the integer cell into field-sampling coordinates.
+            var global_cell: Vector2 = Vector2(float(global_cell_i.x), float(global_cell_i.y)) # Converts the integer cell into field-sampling coordinates without dynamic Variant conversion.
             var biome_kind: int = field_sampler.sample_biome(global_cell) # Reads the radial biome controlling scenery character.
             var scatter: float = field_sampler.sample_scatter(global_cell) # Reads broad deterministic density shared across chunk seams.
             var random_value: float = _hash01(global_cell_i, 311) # Adds fine deterministic variation without another noise query.
@@ -96,7 +111,8 @@ func _build_scenery() -> void: # Adds sparse deterministic vegetation and rock d
             if _biome_supports_rocks(biome_kind) and _hash01(global_cell_i, 617) > 0.86: # Adds occasional stones in rougher terrain types.
                 rock_transforms.append(_make_transform(local_position + Vector3(0.0, -0.08, 0.0), global_cell_i, 701, 0.72, 1.45)) # Seats the stone slightly into the terrain.
     if not tree_transforms.is_empty(): # Creates a tree batch only when this chunk actually contains trees.
-        _build_multimesh("trees", WorldSceneryMeshes.tree(0, abs(chunk_coordinate.x + chunk_coordinate.y) % 3), tree_transforms, 0.0, true) # Reuses the existing coherent procedural tree mesh.
+        var tree_variant: int = absi(chunk_coordinate.x + chunk_coordinate.y) % 3 # Selects one deterministic tree silhouette variant for this chunk.
+        _build_multimesh("trees", WorldSceneryMeshes.tree(0, tree_variant), tree_transforms, 0.0, true) # Reuses the existing coherent procedural tree mesh.
     if not grass_transforms.is_empty(): # Creates a grass batch only when useful detail exists.
         _build_multimesh("grass", WorldSceneryMeshes.grass(), grass_transforms, DETAIL_VISIBILITY_RANGE, false) # Uses short-range batched grass to control fill cost.
     if not rock_transforms.is_empty(): # Creates a rock batch only for chunks with selected outcrops.
@@ -112,20 +128,15 @@ func _build_multimesh(node_name: String, source_mesh: Mesh, transforms: Array[Tr
     var instance: MultiMeshInstance3D = MultiMeshInstance3D.new() # Creates the render node owning this local MultiMesh.
     instance.name = node_name # Gives the scenery batch a readable scene-tree name.
     instance.multimesh = multi_mesh # Attaches the completed repeated-instance resource.
-    instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if cast_shadows else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF # Keeps grass shadow-free while allowing larger scenery to ground itself.
+    if cast_shadows: # Enables ordinary shadows only for larger scenery where they materially ground the object.
+        instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON # Keeps trees and rocks visually grounded.
+    else: # Handles tiny repeated scenery where shadow rendering costs more than it contributes.
+        instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF # Keeps grass shadow-free for cheaper rendering.
     if visibility_end > 0.0: # Applies range culling only to deliberately short-range detail.
         instance.visibility_range_end = visibility_end # Stops small scenery rendering near the streamed terrain horizon.
+        instance.visibility_range_end_margin = 12.0 # Gives the fade mode enough distance to transition without popping.
         instance.visibility_range_fade_mode = GeometryInstance3D.VISIBILITY_RANGE_FADE_SELF # Softens the disappearance of detail near its visibility limit.
     add_child(instance) # Adds the complete local scenery batch beneath the chunk root.
-
-func _sample_normal(global_cell: Vector2) -> Vector3: # Derives one smooth terrain normal from neighboring infinite-world height samples.
-    var left_height: float = field_sampler.sample_height(global_cell + Vector2(-1.0, 0.0)) # Samples the global left neighbor even when it lies in another chunk.
-    var right_height: float = field_sampler.sample_height(global_cell + Vector2(1.0, 0.0)) # Samples the global right neighbor for the X derivative.
-    var near_height: float = field_sampler.sample_height(global_cell + Vector2(0.0, -1.0)) # Samples the global near neighbor for the Z derivative.
-    var far_height: float = field_sampler.sample_height(global_cell + Vector2(0.0, 1.0)) # Samples the global far neighbor even across a chunk edge.
-    var dx: float = (right_height - left_height) / (2.0 * tile_size) # Converts the X height difference into a world-space gradient.
-    var dz: float = (far_height - near_height) / (2.0 * tile_size) # Converts the Z height difference into a world-space gradient.
-    return Vector3(-dx, 1.0, -dz).normalized() # Returns the upward-facing smooth normal used for lighting.
 
 func _make_transform(local_position: Vector3, global_cell: Vector2i, salt: int, minimum_scale: float, maximum_scale: float) -> Transform3D: # Builds one deterministic scenery transform from a global cell.
     var yaw: float = _hash01(global_cell, salt) * TAU # Rotates repeated geometry independently around the vertical axis.
