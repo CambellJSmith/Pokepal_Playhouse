@@ -41,7 +41,8 @@ func _draw() -> void: # Renders the radial pizza-like topology with a neutral ce
     _draw_radial_routes(center_canvas, neutral_radius_pixels, outer_radius_pixels) # Draws the ring route and one outward route through each type sector.
     for index: int in range(destinations.size()): # Draws every named fast-travel destination after the region fills.
         var destination: Dictionary = destinations[index] # Reads one destination's radial metadata.
-        var position: Vector2 = _map_to_canvas(destination.get("map_position", Vector2.ZERO), map_rect, map_extent) # Converts its unbounded logical coordinate into the current dynamic map scale.
+        var map_position: Vector2 = destination.get("map_position", Vector2.ZERO) # Reads the destination's logical radial coordinate.
+        var position: Vector2 = _map_to_canvas(map_position, map_rect, map_extent) # Converts its unbounded logical coordinate into the current dynamic map scale.
         var color: Color = destination.get("color", Color.WHITE) # Reads the established type-related marker colour.
         draw_circle(position, 9.0, color) # Draws the outer destination marker body.
         draw_circle(position, 4.0, color.lightened(0.32)) # Adds a small bright centre for readability over dark sector fills.
@@ -78,9 +79,10 @@ func _draw_radial_routes(center_canvas: Vector2, neutral_radius: float, outer_ra
 func _get_map_extent() -> float: # Chooses a dynamic logical radius so infinite exploration remains visible instead of clamping to old world bounds.
     var landmark_extent: float = RadialWorldFieldSampler.CENTER_RADIUS_CELLS + 42.0 # Keeps the complete landmark ring comfortably inside the map by default.
     for destination: Dictionary in destinations: # Expands the base extent if future radial landmark placement moves farther outward.
-        landmark_extent = maxf(landmark_extent, Vector2(destination.get("map_position", Vector2.ZERO)).length() + 18.0) # Preserves margin around every named destination.
+        var map_position: Vector2 = destination.get("map_position", Vector2.ZERO) # Reads this destination's logical radial coordinate with a typed fallback.
+        landmark_extent = maxf(landmark_extent, map_position.length() + 18.0) # Preserves margin around every named destination.
     var player_extent: float = player_map_position.length() * 1.16 # Expands the map when the player travels far into an infinite type sector.
-    return maxf(landmark_extent, player_extent, 1.0) # Returns a nonzero symmetric logical radius for map scaling.
+    return maxf(maxf(landmark_extent, player_extent), 1.0) # Returns a nonzero symmetric logical radius for map scaling.
 
 func _map_to_canvas(map_position: Vector2, map_rect: Rect2, map_extent: float) -> Vector2: # Converts unbounded logical coordinates into a dynamically scaled square map centred on the origin.
     var center_canvas: Vector2 = map_rect.position + map_rect.size * 0.5 # Resolves the central neutral hub position in UI space.
