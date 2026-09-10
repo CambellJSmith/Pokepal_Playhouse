@@ -6,13 +6,31 @@
 [ext_resource type="Script" uid="uid://c1kjbkk8ju4k6" path="res://scripts/world/world_landmark_system.gd" id="4_landmarks"]
 [ext_resource type="Script" uid="uid://cmi21lpg7f50j" path="res://scripts/ui/world_map_overlay.gd" id="5_map"]
 
+[sub_resource type="ProceduralSkyMaterial" id="SkyMaterial_landscape"]
+sky_top_color = Color(0.26, 0.47, 0.67, 1)
+sky_horizon_color = Color(0.72, 0.78, 0.77, 1)
+ground_bottom_color = Color(0.24, 0.29, 0.22, 1)
+ground_horizon_color = Color(0.72, 0.78, 0.77, 1)
+sun_angle_max = 12.0
+sun_curve = 0.12
+
+[sub_resource type="Sky" id="Sky_landscape"]
+sky_material = SubResource("SkyMaterial_landscape")
+
 [sub_resource type="Environment" id="Environment_main"]
-background_mode = 1
+background_mode = 2
+sky = SubResource("Sky_landscape")
 background_color = Color(0.56, 0.75, 0.91, 1)
 ambient_light_source = 2
 ambient_light_color = Color(0.82, 0.87, 0.91, 1)
-ambient_light_energy = 0.68
-reflected_light_source = 1
+ambient_light_energy = 0.72
+reflected_light_source = 2
+fog_enabled = true
+fog_light_color = Color(0.43, 0.53, 0.59, 1)
+fog_light_energy = 0.55
+fog_density = 0.0010
+fog_sky_affect = 0.35
+tonemap_mode = 0
 
 [sub_resource type="StyleBoxFlat" id="StyleBox_hud"]
 content_margin_left = 12.0
@@ -33,8 +51,10 @@ environment = SubResource("Environment_main")
 [node name="sun" type="DirectionalLight3D" parent="." unique_id=979421091]
 transform = Transform3D(0.8480481, 0.3938068, -0.35458517, 0, 0.66913056, 0.74314487, 0.52991927, -0.63022256, 0.5674549, 0, 0, 0)
 light_color = Color(1, 0.96, 0.86, 1)
-light_energy = 1.18
+light_energy = 1.0
 shadow_enabled = true
+directional_shadow_max_distance = 110.0
+directional_shadow_blend_splits = true
 
 [node name="world_builder" type="Node3D" parent="." unique_id=248779433 groups=["world_builder"]]
 script = ExtResource("2_world")
@@ -43,7 +63,7 @@ script = ExtResource("2_world")
 script = ExtResource("4_landmarks")
 
 [node name="player" parent="." unique_id=918382089 instance=ExtResource("1_player")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 30)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.0, 69)
 
 [node name="wild_pokemon_spawner" type="Node3D" parent="." unique_id=2121055228]
 script = ExtResource("3_spawner")
@@ -66,12 +86,12 @@ layout_mode = 2
 [node name="title" type="Label" parent="hud/margin/panel/text" unique_id=890190821]
 layout_mode = 2
 theme_override_font_sizes/font_size = 18
-text = "Poképal Playhouse — Generation IV type world"
+text = "poképal playhouse — explore the wilds"
 
 [node name="controls" type="Label" parent="hud/margin/panel/text" unique_id=2499083]
 layout_mode = 2
 text = "wasd / arrows / left stick  •  move    right mouse / right stick  •  orbit    wheel  •  zoom
-Esc / Start  •  map    wild Pokémon inhabit the region matching their primary type"
+Esc / Start  •  world map and fast travel"
 
 [node name="world_map" type="CanvasLayer" parent="." unique_id=1352453810]
 script = ExtResource("5_map")

@@ -19,6 +19,7 @@ const BIOME_DRAGON: int = 14 # Mirrors the dragon biome index used by the world 
 const BIOME_DARK: int = 15 # Mirrors the dark biome index used by the world layout.
 const BIOME_STEEL: int = 16 # Mirrors the steel biome index used by the world layout.
 
+var landscape_scale: float = 1.0 # Converts expanded world coordinates into the shared regional field.
 var world_seed: int # Stores the deterministic seed shared by every mathematical field in this sampler.
 var biome_centers: Array[Vector2] = [] # Stores stable biome anchors while warped scoring creates irregular borders around them.
 var macro_noise: FastNoiseLite = FastNoiseLite.new() # Produces broad rolling continental elevation.
@@ -36,10 +37,11 @@ var rock_cluster_noise: FastNoiseLite = FastNoiseLite.new() # Supplies clustered
 var grass_cluster_noise: FastNoiseLite = FastNoiseLite.new() # Supplies broad grass and ground-cover patches.
 var route_noise: FastNoiseLite = FastNoiseLite.new() # Supplies smooth deterministic lateral route curvature.
 
-func _init(seed_value: int, centers: Array[Vector2]) -> void: # Configures independent fields from one deterministic world seed with startup cost kept bounded.
+func _init(seed_value: int, centers: Array[Vector2], scale_value: float = 1.0) -> void: # Configures independent fields from one deterministic world seed with startup cost kept bounded.
+    landscape_scale = maxf(scale_value, 1.0) # Keeps regional field sampling independent of map resolution.
     world_seed = seed_value # Stores the requested seed so all later field queries remain reproducible.
     for center: Vector2 in centers: # Copies biome anchors into a strongly typed local array.
-        biome_centers.append(center) # Preserves the source ordering expected by the biome constants above.
+        biome_centers.append(center / landscape_scale) # Preserves the source ordering expected by the biome constants above.
     _configure_noise(macro_noise, 11, 0.010, FastNoiseLite.FRACTAL_FBM, 4, 0.48, 2.05, true, 12.0) # Keeps one broad domain-warped field where warping materially affects the terrain silhouette.
     _configure_noise(detail_noise, 23, 0.035, FastNoiseLite.FRACTAL_FBM, 3, 0.50, 2.15, false, 0.0) # Uses ordinary FBM for inexpensive local terrain breakup.
     _configure_noise(ridge_noise, 37, 0.020, FastNoiseLite.FRACTAL_RIDGED, 4, 0.52, 2.10, false, 0.0) # Uses ridged fractal structure without an additional domain-warp pass.
@@ -56,6 +58,7 @@ func _init(seed_value: int, centers: Array[Vector2]) -> void: # Configures indep
     _configure_noise(route_noise, 241, 0.020, FastNoiseLite.FRACTAL_FBM, 2, 0.50, 2.00, false, 0.0) # Builds route curvature with minimal startup sampling cost.
 
 func sample_biome(local: Vector2) -> int: # Resolves an irregular contiguous type region from warped distance fields without square-root distance work.
+    local /= landscape_scale # Samples regional fields consistently across the expanded landscape.
     var warped_local: Vector2 = local + Vector2(biome_warp_x.get_noise_2d(local.x, local.y), biome_warp_y.get_noise_2d(local.x + 211.0, local.y - 137.0)) * 13.0 # Warps coordinates before measuring region ownership.
     var detail_x: float = biome_detail_noise.get_noise_2d(local.x, local.y) # Samples one shared boundary-irregularity axis.
     var detail_y: float = biome_detail_noise.get_noise_2d(local.x + 173.0, local.y - 229.0) # Samples a decorrelated second boundary axis.
@@ -73,9 +76,10 @@ func sample_biome(local: Vector2) -> int: # Resolves an irregular contiguous typ
     return best_biome # Returns the deterministic type region selected by continuous field competition.
 
 func sample_height(local: Vector2) -> float: # Produces continuous terrain while sampling expensive regional fractals only where they can affect the result.
+    local /= landscape_scale # Samples regional fields consistently across the expanded landscape.
     var macro: float = macro_noise.get_noise_2d(local.x, local.y) * 1.35 # Establishes broad domain-warped elevation across the whole map.
     var detail: float = detail_noise.get_noise_2d(local.x, local.y) * 0.34 # Adds inexpensive smaller terrain undulation.
-    var height: float = macro + detail # Starts with terrain shared continuously by every biome.
+    var height: float = 1.65 + macro * 1.8 + detail * 1.4 # Starts with terrain shared continuously by every biome.
     var rock_weight: float = _region_weight(local, BIOME_ROCK, 42.0) # Measures influence from the Rock mountain range.
     var dragon_weight: float = _region_weight(local, BIOME_DRAGON, 39.0) # Measures influence from the Dragon peaks.
     var ice_weight: float = _region_weight(local, BIOME_ICE, 38.0) # Measures influence from the elevated Ice shelf.
@@ -96,50 +100,47 @@ func sample_height(local: Vector2) -> float: # Produces continuous terrain while
     var badland: float = 0.5 # Uses a neutral fallback outside Ground regional influence.
     if ground_weight > 0.001: # Avoids the ping-pong FastNoiseLite query away from the Ground region.
         badland = clampf((badland_noise.get_noise_2d(local.x, local.y) + 1.0) * 0.5, 0.0, 1.0) # Samples erosion-like forms only where they contribute.
-    height += rock_weight * (1.6 + ridge * 6.2) # Raises the Rock region into multiple connected ridges.
-    height += dragon_weight * (2.0 + ridge * 6.8) # Makes Dragon one of the world's highest and sharpest regions.
-    height += ice_weight * (2.7 + ridge * 1.5) # Creates a broad high glacial shelf with subdued ridge breakup.
-    height += flying_weight * (3.0 + macro * 0.35) # Creates an open high plateau with broad relief.
-    height += fire_weight * (2.6 + ridge * 2.4) # Raises the volcanic basin rim using the shared ridge field.
-    height -= _region_weight(local, BIOME_FIRE, 12.0) * 4.2 # Cuts a real central crater into the raised volcanic region.
-    height += ground_weight * (1.5 + (badland - 0.35) * 2.5) # Creates repeated badland ridges from the dedicated sharp field.
-    height += fighting_weight * 1.7 # Raises the Fighting region into a broad traversable plateau.
-    height += steel_weight * 1.5 # Raises the Steel region into a comparatively level industrial shelf.
+    height += rock_weight * (5.0 + ridge * 19.0) # Raises the Rock region into multiple connected ridges.
+    height += dragon_weight * (7.0 + ridge * 25.0) # Makes Dragon one of the world's highest and sharpest regions.
+    height += ice_weight * (8.0 + ridge * 5.0) # Creates a broad high glacial shelf with subdued ridge breakup.
+    height += flying_weight * (8.0 + macro * 0.6) # Creates an open high plateau with broad relief.
+    height += fire_weight * (7.0 + ridge * 9.0) # Raises the volcanic basin rim using the shared ridge field.
+    height -= _region_weight(local, BIOME_FIRE, 12.0) * 8.5 # Cuts a real central crater into the raised volcanic region.
+    height += ground_weight * (3.0 + (badland - 0.35) * 7.0) # Creates repeated badland ridges from the dedicated sharp field.
+    height += fighting_weight * 3.5 # Raises the Fighting region into a broad traversable plateau.
+    height += steel_weight * 3.0 # Raises the Steel region into a comparatively level industrial shelf.
     height += psychic_weight * 0.9 # Gives the Psychic region a gentle garden rise.
     height += grass_weight * detail * 0.7 # Gives the forest rolling local terrain while keeping its macro silhouette soft.
-    height -= ghost_weight * 1.3 # Creates a broad hollow around the Ghost region.
-    height -= water_weight * 1.8 # Creates a coherent low basin where lakes and channels can occupy low terrain.
-    height -= poison_weight * 0.9 # Keeps the Poison region low enough to support marsh pools.
-    height -= sample_river_strength(local) * 0.34 # Carves shallow channels without performing a second moisture-noise query at every heightmap vertex.
+    height -= ghost_weight * 0.8 # Creates a broad hollow around the Ghost region.
+    height -= water_weight * 5.4 # Creates a coherent low basin where lakes and channels can occupy low terrain.
+    height -= poison_weight * 1.5 # Keeps the Poison region low enough to support marsh pools.
+    height = lerpf(height, -2.05, sample_river_strength(local * landscape_scale)) # Carves shallow channels without performing a second moisture-noise query at every heightmap vertex.
     return height # Returns one continuous deterministic elevation value.
 
 func sample_moisture(local: Vector2) -> float: # Returns the broad deterministic wetness field used by water and vegetation.
+    local /= landscape_scale # Samples regional fields consistently across the expanded landscape.
     return moisture_noise.get_noise_2d(local.x, local.y) # Samples one low-cost non-warped FBM field.
 
 func sample_temperature(local: Vector2) -> float: # Returns a broad temperature field with a small north-south gradient.
+    local /= landscape_scale # Samples regional fields consistently across the expanded landscape.
     var noise_value: float = temperature_noise.get_noise_2d(local.x, local.y) # Samples continuous temperature variation.
     var latitude_bias: float = clampf(-local.y / 180.0, -0.45, 0.45) # Adds a gentle geographic trend without overriding local noise.
     return clampf(noise_value + latitude_bias, -1.0, 1.0) # Keeps the combined field within a predictable range.
 
-func sample_river_strength(local: Vector2) -> float: # Returns a narrow continuous mask around zero-contours of the river field.
-    var river_signal: float = absf(river_noise.get_noise_2d(local.x, local.y)) # Measures distance in noise-value space from a meandering zero contour.
-    return clampf(1.0 - river_signal / 0.075, 0.0, 1.0) # Converts the signal into a soft channel mask used by terrain and water.
+func sample_river_strength(local: Vector2) -> float: # Carves one connected meandering river through the northern lowlands and lake district.
+    local /= landscape_scale # Preserves river geography when the map is expanded.
+    var center_line: float = 67.0 + sin(local.x * 0.038) * 8.0 + sin(local.x * 0.081 + 0.6) * 3.0 # Defines a continuous valley instead of unrelated noise pools.
+    var distance: float = absf(local.y - center_line) # Measures distance across the river corridor.
+    var width: float = 2.0 + (sin(local.x * 0.051) + 1.0) * 0.65 # Varies the channel width gradually along its course.
+    return 1.0 - smoothstep(width * 0.45, width + 2.0, distance) # Blends the river bed into sloping natural banks.
 
-func is_water(local: Vector2, biome_kind: int, terrain_height: float, water_level: float) -> bool: # Decides where carved low terrain receives visible water.
-    var river_strength: float = sample_river_strength(local) # Reuses the exact channel field that already shapes terrain.
-    var moisture: float = sample_moisture(local) # Uses wetness to suppress streams through extremely dry terrain.
-    if biome_kind == BIOME_WATER: # Gives the dedicated Water region the broadest connected water coverage.
-        var basin_water: bool = terrain_height < water_level + 0.62 and moisture > -0.55 # Fills sufficiently low basin terrain while preserving islands and banks.
-        var channel_water: bool = river_strength > 0.70 and terrain_height < water_level + 0.85 # Keeps narrow channels connected around the larger basin.
-        return basin_water or channel_water # Combines lake-like basin water and meandering channels.
-    if biome_kind == BIOME_POISON: # Gives the Poison biome shallow fragmented marsh water.
-        return terrain_height < water_level + 0.34 and moisture > 0.02 and river_strength > 0.22 # Restricts pools to wet low ground near drainage contours.
-    var natural_stream: bool = river_strength > 0.83 and moisture > 0.08 and terrain_height < water_level + 0.42 # Allows occasional narrow streams to cross ordinary regions.
-    return natural_stream # Returns only terrain-driven streams outside the two water-heavy biomes.
+func is_water(_local: Vector2, _biome_kind: int, terrain_height: float, water_level: float) -> bool: # Classifies water from the actual terrain bed and common surface elevation.
+    return terrain_height < water_level # Keeps visual shorelines and logical water tied to physical elevation.
 
 func sample_tree_density(local: Vector2, biome_kind: int) -> float: # Returns clustered tree probability with one forest-noise query rather than two.
+    local /= landscape_scale # Samples regional fields consistently across the expanded landscape.
     var cluster: float = clampf((forest_cluster_noise.get_noise_2d(local.x, local.y) + 1.0) * 0.5, 0.0, 1.0) # Creates large coherent forest masses and clearings.
-    var moisture: float = clampf((sample_moisture(local) + 1.0) * 0.5, 0.0, 1.0) # Converts wetness into a vegetation-friendly positive range.
+    var moisture: float = clampf((sample_moisture(local * landscape_scale) + 1.0) * 0.5, 0.0, 1.0) # Converts wetness into a vegetation-friendly positive range.
     var detail: float = _cheap_detail(local, 0.071, 0.113, 0.37) # Adds local density breakup without another FastNoiseLite fractal query.
     var base_density: float = 0.08 # Gives ordinary regions sparse occasional trees instead of uniform empty ground.
     match biome_kind: # Assigns type-specific forest character without hardcoding individual tree positions.
@@ -163,6 +164,7 @@ func sample_tree_density(local: Vector2, biome_kind: int) -> float: # Returns cl
     return clampf(clustered_density * lerpf(0.60, 1.12, detail) * lerpf(0.65, 1.15, moisture), 0.0, 1.0) # Combines clustering, cheap local breakup, and wetness.
 
 func sample_rock_density(local: Vector2, biome_kind: int) -> float: # Returns clustered exposed-rock probability before slope and deterministic sampling are applied.
+    local /= landscape_scale # Samples regional fields consistently across the expanded landscape.
     var cluster: float = clampf((rock_cluster_noise.get_noise_2d(local.x, local.y) + 1.0) * 0.5, 0.0, 1.0) # Produces coherent outcrop groups rather than even random stones.
     var base_density: float = 0.10 # Gives ordinary terrain a small amount of natural stone detail.
     match biome_kind: # Assigns stronger outcrop fields to geologically exposed regions.
@@ -183,8 +185,9 @@ func sample_rock_density(local: Vector2, biome_kind: int) -> float: # Returns cl
     return clampf(base_density * lerpf(0.25, 1.20, cluster * cluster), 0.0, 1.0) # Converts the field into a clustered placement probability.
 
 func sample_grass_density(local: Vector2, biome_kind: int) -> float: # Returns ground-cover density used for inexpensive MultiMesh grass clumps.
+    local /= landscape_scale # Samples regional fields consistently across the expanded landscape.
     var cluster: float = clampf((grass_cluster_noise.get_noise_2d(local.x, local.y) + 1.0) * 0.5, 0.0, 1.0) # Creates broad patches rather than uniform coverage.
-    var moisture: float = clampf((sample_moisture(local) + 1.0) * 0.5, 0.0, 1.0) # Makes wetter ground naturally support denser cover.
+    var moisture: float = clampf((sample_moisture(local * landscape_scale) + 1.0) * 0.5, 0.0, 1.0) # Makes wetter ground naturally support denser cover.
     var base_density: float = 0.42 # Gives most soft-ground regions visible small-scale detail.
     if biome_kind in [BIOME_ROCK, BIOME_DRAGON, BIOME_GROUND, BIOME_FIRE, BIOME_ICE, BIOME_STEEL, BIOME_FLYING]: # Detects exposed stone and harsh regions.
         base_density = 0.10 # Keeps grass sparse where geology or climate should dominate.
@@ -193,6 +196,7 @@ func sample_grass_density(local: Vector2, biome_kind: int) -> float: # Returns g
     return clampf(base_density * lerpf(0.30, 1.10, cluster) * lerpf(0.55, 1.10, moisture), 0.0, 1.0) # Returns final patch density after environmental modulation.
 
 func sample_color_variation(local: Vector2) -> float: # Returns subtle signed terrain-color breakup without a FastNoiseLite call for every duplicated triangle vertex.
+    local /= landscape_scale # Samples regional fields consistently across the expanded landscape.
     var seed_phase: float = float(world_seed % 997) * 0.013 # Derives a deterministic phase from the world seed.
     var broad: float = sin(local.x * 0.091 + local.y * 0.067 + seed_phase) # Produces broad continuous brightness movement across terrain.
     var cross: float = cos(local.x * 0.043 - local.y * 0.119 - seed_phase * 0.73) # Adds a second oblique frequency to avoid visible stripes.
